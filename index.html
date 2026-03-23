@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IPL Auction 2026 | Team Login Portal</title>
+    <title>IPL Auction 2026 | Official Team Portal</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
@@ -12,21 +12,15 @@
         .gradient-bg {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         }
-        .auctioneer-gradient {
-            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-        }
-        .audience-gradient {
-            background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%);
-        }
         .team-card {
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             cursor: pointer;
-            aspect-ratio: 1 / 1;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
             text-align: center;
+            min-height: 280px;
         }
         .team-card:hover {
             transform: translateY(-8px);
@@ -56,59 +50,28 @@
             gap: 1.75rem;
         }
         @media (max-width: 1024px) {
-            .grid-container {
-                grid-template-columns: repeat(3, 1fr);
-                gap: 1.5rem;
-            }
+            .grid-container { grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
         }
         @media (max-width: 768px) {
-            .grid-container {
-                grid-template-columns: repeat(2, 1fr);
-                gap: 1.25rem;
-            }
+            .grid-container { grid-template-columns: repeat(2, 1fr); gap: 1.25rem; }
+            .team-card { min-height: 250px; }
         }
         @media (max-width: 480px) {
-            .grid-container {
-                grid-template-columns: repeat(1, 1fr);
-            }
+            .grid-container { grid-template-columns: repeat(1, 1fr); }
         }
-        .team-icon-wrapper {
-            transition: transform 0.2s ease;
-        }
-        .team-card:hover .team-icon-wrapper {
-            transform: scale(1.05);
-        }
-        .card-content {
+        .team-logo-img {
             width: 100%;
-            padding: 1.25rem;
+            height: 100%;
+            object-fit: contain;
+            transition: transform 0.3s ease;
         }
-        .team-short-badge {
-            font-weight: 700;
-            letter-spacing: 0.5px;
-        }
-        .special-card {
-            position: relative;
-            overflow: hidden;
-        }
-        .special-card::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-        .special-card:hover::before {
-            opacity: 1;
+        .team-card:hover .team-logo-img {
+            transform: scale(1.1);
         }
     </style>
 </head>
 <body class="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 min-h-screen">
 
-    <!-- Navigation Bar -->
     <nav class="bg-white/90 backdrop-blur-md shadow-lg sticky top-0 z-50 border-b border-gray-200/50">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between items-center py-4">
@@ -120,10 +83,10 @@
                         <h1 class="text-2xl font-extrabold bg-gradient-to-r from-indigo-700 to-purple-700 bg-clip-text text-transparent tracking-tight">
                             IPL Auction 2026
                         </h1>
-                        <p class="text-xs text-gray-500 font-medium">Team Management Portal · Secure Access</p>
+                        <p class="text-xs text-gray-500 font-medium">Official Team Management Portal</p>
                     </div>
                 </div>
-                <div class="flex items-center space-x-2 bg-gray-100 px-3 py-1.5 rounded-full">
+                <div class="hidden sm:flex items-center space-x-2 bg-gray-100 px-3 py-1.5 rounded-full">
                     <i class="fas fa-shield-alt text-green-600 text-sm"></i>
                     <span class="text-xs font-semibold text-gray-700">Verified Access</span>
                 </div>
@@ -131,92 +94,64 @@
         </div>
     </nav>
 
-    <!-- Hero Section with Stats -->
     <div class="relative overflow-hidden">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 pb-6">
-            <div class="text-center">
-                <div class="inline-flex items-center bg-indigo-100 text-indigo-800 px-4 py-1.5 rounded-full text-sm font-semibold mb-4">
-                    <i class="fas fa-gavel mr-2 text-indigo-600"></i> Mega Auction · 2026 Edition
-                </div>
-                <h2 class="text-4xl md:text-5xl font-black text-gray-800 mb-4 leading-tight">
-                    Welcome to <span class="bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">IPL Mega Auction</span>
-                </h2>
-                <p class="text-lg text-gray-600 max-w-2xl mx-auto">
-                    Select your franchise, auctioneer panel, or join as audience to experience the thrill.
-                    Each role has unique access credentials.
-                </p>
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 pb-6 text-center">
+            <div class="inline-flex items-center bg-indigo-100 text-indigo-800 px-4 py-1.5 rounded-full text-sm font-semibold mb-4">
+                <i class="fas fa-gavel mr-2 text-indigo-600"></i> Mega Auction · 2026 Edition
             </div>
+            <h2 class="text-4xl md:text-5xl font-black text-gray-800 mb-4 leading-tight">
+                Welcome to <span class="bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">IPL Mega Auction</span>
+            </h2>
+            <p class="text-lg text-gray-600 max-w-2xl mx-auto">
+                Select your franchise or panel role to enter the dashboard.
+            </p>
         </div>
     </div>
 
-    <!-- Team Grid - 4 Columns x 3 Rows (10 Teams + 2 Special Roles = 12 Boxes) -->
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <div class="grid-container" id="teamsGrid">
-            <!-- Dynamic square cards will be injected here -->
-            <div class="col-span-full text-center py-16">
-                <div class="animate-pulse flex justify-center space-x-4">
-                    <div class="w-32 h-32 bg-gray-200 rounded-2xl"></div>
-                    <div class="w-32 h-32 bg-gray-200 rounded-2xl"></div>
-                    <div class="w-32 h-32 bg-gray-200 rounded-2xl"></div>
-                </div>
             </div>
-        </div>
         
-        <!-- Additional info section -->
         <div class="mt-12 text-center">
             <div class="inline-flex items-center gap-2 bg-white/60 backdrop-blur-sm px-5 py-2 rounded-full shadow-sm border border-gray-200">
                 <i class="fas fa-key text-indigo-500 text-sm"></i>
-                <span class="text-xs text-gray-600 font-medium">Demo: Teams (csk/mi etc.) | Auctioneer: admin/auction2026 | Audience: fan/cheer2026</span>
+                <span class="text-xs text-gray-600 font-medium">Demo: Teams (csk/csk2026) | Admin: admin/auction2026</span>
             </div>
         </div>
     </div>
 
-    <!-- Login Modal - Enhanced with Role Detection -->
     <div id="loginModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden items-center justify-center z-50 modal transition-all duration-300">
         <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 transform transition-all scale-95 opacity-0 modal-content">
             <div class="p-6 md:p-7">
                 <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-2xl font-extrabold text-gray-800 flex items-center gap-2">
-                        <i class="fas fa-sign-in-alt text-indigo-500 text-xl"></i>
-                        <span id="modalTeamName">Role Login</span>
+                    <h3 class="text-xl font-extrabold text-gray-800 flex items-center gap-2">
+                        <i class="fas fa-sign-in-alt text-indigo-500"></i>
+                        <span id="modalTeamName text-sm">Role Login</span>
                     </h3>
                     <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-full w-8 h-8 flex items-center justify-center transition">
-                        <i class="fas fa-times text-lg"></i>
+                        <i class="fas fa-times"></i>
                     </button>
                 </div>
                 <div class="flex justify-center mb-6">
-                    <div id="modalTeamIcon" class="w-24 h-24 rounded-2xl flex items-center justify-center text-4xl shadow-lg transition-all"></div>
+                    <div id="modalTeamIcon" class="w-28 h-28 p-2 rounded-2xl flex items-center justify-center shadow-md bg-white border border-gray-100">
+                        </div>
                 </div>
                 <form id="loginForm" onsubmit="handleLogin(event)">
                     <div class="mb-5">
-                        <label class="block text-gray-700 text-sm font-bold mb-2">
-                            <i class="fas fa-user-circle mr-2 text-indigo-500"></i>Username / ID
-                        </label>
-                        <input type="text" id="username" 
-                               class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-all"
-                               placeholder="Enter username" autocomplete="off" required>
+                        <label class="block text-gray-700 text-sm font-bold mb-2">Username</label>
+                        <input type="text" id="username" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-400 outline-none transition-all" required>
                     </div>
                     <div class="mb-6">
-                        <label class="block text-gray-700 text-sm font-bold mb-2">
-                            <i class="fas fa-lock mr-2 text-indigo-500"></i>Password
-                        </label>
-                        <input type="password" id="password" 
-                               class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-all"
-                               placeholder="Enter password" required>
+                        <label class="block text-gray-700 text-sm font-bold mb-2">Password</label>
+                        <input type="password" id="password" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-400 outline-none transition-all" required>
                     </div>
-                    <div class="mb-5 p-3 bg-indigo-50 rounded-xl text-sm text-indigo-800 border border-indigo-100">
-                        <i class="fas fa-info-circle mr-2"></i>
-                        <span id="credentialHint" class="font-mono text-xs">Credentials preview</span>
+                    <div class="mb-5 p-3 bg-indigo-50 rounded-xl border border-indigo-100">
+                        <span id="credentialHint" class="font-mono text-[10px] text-indigo-700 uppercase tracking-tighter"></span>
                     </div>
-                    <button type="submit" 
-                            class="w-full gradient-bg text-white font-bold py-3.5 px-4 rounded-xl hover:shadow-xl transition-all transform hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2">
-                        <i class="fas fa-arrow-right-to-bracket"></i>
-                        <span>Access Dashboard</span>
+                    <button type="submit" class="w-full gradient-bg text-white font-bold py-3.5 rounded-xl hover:shadow-xl transition-all transform active:scale-95">
+                        Access Dashboard
                     </button>
                 </form>
-                <div class="mt-5 text-center text-xs text-gray-400 border-t pt-4">
-                    <i class="fas fa-shield-heart"></i> Secure access for authorized personnel only
-                </div>
             </div>
         </div>
     </div>
@@ -224,495 +159,75 @@
     <div id="toastMsg" class="toast-notify opacity-0 pointer-events-none"></div>
 
     <script>
-        // Team data with login credentials - 10 teams + Auctioneer + Audience = 12 total boxes (4x3 grid)
         const teams = [
-            { 
-                id: "csk", 
-                name: "Chennai Super Kings", 
-                shortName: "CSK", 
-                color: "#FDB913", 
-                bgColor: "#FFF8E0",
-                icon: "fa-crown",
-                username: "csk",
-                password: "csk2026",
-                page: "csk.html",
-                role: "team"
-            },
-            { 
-                id: "mi", 
-                name: "Mumbai Indians", 
-                shortName: "MI", 
-                color: "#004BA0", 
-                bgColor: "#E8F0FE",
-                icon: "fa-star-of-life",
-                username: "mi",
-                password: "mi2026",
-                page: "mi.html",
-                role: "team"
-            },
-            { 
-                id: "rcb", 
-                name: "Royal Challengers Bangalore", 
-                shortName: "RCB", 
-                color: "#EC1C24", 
-                bgColor: "#FFEBEB",
-                icon: "fa-lion",
-                username: "rcb",
-                password: "rcb2026",
-                page: "rcb.html",
-                role: "team"
-            },
-            { 
-                id: "kkr", 
-                name: "Kolkata Knight Riders", 
-                shortName: "KKR", 
-                color: "#3A225D", 
-                bgColor: "#F3ECFF",
-                icon: "fa-mask",
-                username: "kkr",
-                password: "kkr2026",
-                page: "kkr.html",
-                role: "team"
-            },
-            { 
-                id: "srh", 
-                name: "Sunrisers Hyderabad", 
-                shortName: "SRH", 
-                color: "#F26522", 
-                bgColor: "#FFF2E8",
-                icon: "fa-sun",
-                username: "srh",
-                password: "srh2026",
-                page: "srh.html",
-                role: "team"
-            },
-            { 
-                id: "dc", 
-                name: "Delhi Capitals", 
-                shortName: "DC", 
-                color: "#0078BC", 
-                bgColor: "#E8F4FF",
-                icon: "fa-building",
-                username: "dc",
-                password: "dc2026",
-                page: "dc.html",
-                role: "team"
-            },
-            { 
-                id: "pbks", 
-                name: "Punjab Kings", 
-                shortName: "PBKS", 
-                color: "#ED1B24", 
-                bgColor: "#FFE8E8",
-                icon: "fa-lion",
-                username: "pbks",
-                password: "pbks2026",
-                page: "pbks.html",
-                role: "team"
-            },
-            { 
-                id: "rr", 
-                name: "Rajasthan Royals", 
-                shortName: "RR", 
-                color: "#254AA5", 
-                bgColor: "#EAF0FF",
-                icon: "fa-crown",
-                username: "rr",
-                password: "rr2026",
-                page: "rr.html",
-                role: "team"
-            },
-            { 
-                id: "lsg", 
-                name: "Lucknow Super Giants", 
-                shortName: "LSG", 
-                color: "#2AA9C9", 
-                bgColor: "#E8F9FF",
-                icon: "fa-gem",
-                username: "lsg",
-                password: "lsg2026",
-                page: "lsg.html",
-                role: "team"
-            },
-            { 
-                id: "gt", 
-                name: "Gujarat Titans", 
-                shortName: "GT", 
-                color: "#1B2B32", 
-                bgColor: "#ECF0F2",
-                icon: "fa-bolt",
-                username: "gt",
-                password: "gt2026",
-                page: "gt.html",
-                role: "team"
-            },
-            { 
-                id: "auctioneer", 
-                name: "Auctioneer Panel", 
-                shortName: "AUCTIONEER", 
-                color: "#F59E0B", 
-                bgColor: "#FFFBEB",
-                icon: "fa-gavel",
-                username: "admin",
-                password: "auction2026",
-                page: "auctioneer.html",
-                role: "special",
-                specialClass: "auctioneer-gradient"
-            },
-            { 
-                id: "audience", 
-                name: "Audience Zone", 
-                shortName: "AUDIENCE", 
-                color: "#3B82F6", 
-                bgColor: "#EFF6FF",
-                icon: "fa-users",
-                username: "fan",
-                password: "cheer2026",
-                page: "audience.html",
-                role: "special",
-                specialClass: "audience-gradient"
-            }
+            { id: "csk", name: "Chennai Super Kings", shortName: "CSK", color: "#FDB913", logo: "https://bcciplayerimages.s3.ap-south-1.amazonaws.com/ipl/CHH/logos/logo-rect/CSK.png" },
+            { id: "mi", name: "Mumbai Indians", shortName: "MI", color: "#004BA0", logo: "https://bcciplayerimages.s3.ap-south-1.amazonaws.com/ipl/MUM/logos/logo-rect/MI.png" },
+            { id: "rcb", name: "Royal Challengers Bengaluru", shortName: "RCB", color: "#EC1C24", logo: "https://bcciplayerimages.s3.ap-south-1.amazonaws.com/ipl/ROY/logos/logo-rect/RCB.png" },
+            { id: "kkr", name: "Kolkata Knight Riders", shortName: "KKR", color: "#3A225D", logo: "https://bcciplayerimages.s3.ap-south-1.amazonaws.com/ipl/KOL/logos/logo-rect/KKR.png" },
+            { id: "srh", name: "Sunrisers Hyderabad", shortName: "SRH", color: "#F26522", logo: "https://bcciplayerimages.s3.ap-south-1.amazonaws.com/ipl/SUN/logos/logo-rect/SRH.png" },
+            { id: "dc", name: "Delhi Capitals", shortName: "DC", color: "#0078BC", logo: "https://bcciplayerimages.s3.ap-south-1.amazonaws.com/ipl/DEL/logos/logo-rect/DC.png" },
+            { id: "pbks", name: "Punjab Kings", shortName: "PBKS", color: "#ED1B24", logo: "https://bcciplayerimages.s3.ap-south-1.amazonaws.com/ipl/PUN/logos/logo-rect/PBKS.png" },
+            { id: "rr", name: "Rajasthan Royals", shortName: "RR", color: "#254AA5", logo: "https://bcciplayerimages.s3.ap-south-1.amazonaws.com/ipl/RAJ/logos/logo-rect/RR.png" },
+            { id: "lsg", name: "Lucknow Super Giants", shortName: "LSG", color: "#2AA9C9", logo: "https://bcciplayerimages.s3.ap-south-1.amazonaws.com/ipl/LUC/logos/logo-rect/LSG.png" },
+            { id: "gt", name: "Gujarat Titans", shortName: "GT", color: "#1B2B32", logo: "https://bcciplayerimages.s3.ap-south-1.amazonaws.com/ipl/GUJ/logos/logo-rect/GT.png" },
+            { id: "auctioneer", name: "Auctioneer Panel", shortName: "ADMIN", color: "#F59E0B", logo: "https://cdn-icons-png.flaticon.com/512/2620/2620611.png", role: "special" },
+            { id: "audience", name: "Audience Zone", shortName: "FANS", color: "#3B82F6", logo: "https://cdn-icons-png.flaticon.com/512/2634/2634312.png", role: "special" }
         ];
 
         let selectedTeam = null;
 
-        // Enhanced toast notification
-        function showToast(message, isError = false) {
-            const toast = document.getElementById('toastMsg');
-            toast.textContent = message;
-            toast.style.background = isError ? 'linear-gradient(135deg, #ef4444, #dc2626)' : 'linear-gradient(135deg, #10b981, #059669)';
-            toast.style.color = 'white';
-            toast.style.fontWeight = '600';
-            toast.classList.remove('opacity-0', 'pointer-events-none');
-            toast.classList.add('opacity-100');
-            setTimeout(() => {
-                toast.classList.add('opacity-0', 'pointer-events-none');
-            }, 3200);
+        function renderTeamCards() {
+            const grid = document.getElementById('teamsGrid');
+            grid.innerHTML = teams.map(team => `
+                <div class="team-card bg-white rounded-2xl shadow-lg border-t-[6px] group" 
+                     style="border-top-color: ${team.color}" 
+                     onclick='openModal(${JSON.stringify(team)})'>
+                    <div class="w-32 h-32 mb-4 p-2 bg-white rounded-xl">
+                        <img src="${team.logo}" alt="${team.name}" class="team-logo-img">
+                    </div>
+                    <h3 class="text-lg font-bold text-gray-800">${team.name}</h3>
+                    <div class="mt-2 px-4 py-1 rounded-full text-xs font-black" 
+                         style="background: ${team.color}15; color: ${team.color}">
+                        ${team.shortName}
+                    </div>
+                </div>
+            `).join('');
         }
 
         function openModal(team) {
             selectedTeam = team;
             const modal = document.getElementById('loginModal');
-            const modalContent = modal.querySelector('.modal-content');
+            document.getElementById('modalTeamIcon').innerHTML = `<img src="${team.logo}" class="max-h-full object-contain">`;
+            document.getElementById('credentialHint').innerText = `ID: ${team.id} | PASS: ${team.id}2026`;
+            if(team.id === 'auctioneer') document.getElementById('credentialHint').innerText = "ID: admin | PASS: auction2026";
             
-            // Update modal content with team details
-            document.getElementById('modalTeamName').innerHTML = team.name;
-            document.getElementById('modalTeamIcon').innerHTML = `<i class="fas ${team.icon} text-4xl" style="color: ${team.color}"></i>`;
-            document.getElementById('modalTeamIcon').style.backgroundColor = team.bgColor;
-            
-            // Custom credential hint based on role
-            if (team.role === 'special') {
-                if (team.id === 'auctioneer') {
-                    document.getElementById('credentialHint').innerHTML = `<i class="fas fa-gavel mr-1"></i> Admin Access: ${team.username} / ${team.password}`;
-                } else {
-                    document.getElementById('credentialHint').innerHTML = `<i class="fas fa-ticket-alt mr-1"></i> Fan Access: ${team.username} / ${team.password}`;
-                }
-            } else {
-                document.getElementById('credentialHint').innerHTML = `<i class="fas fa-key mr-1"></i> Team Credentials: ${team.username} / ${team.password}`;
-            }
-            
-            document.getElementById('username').value = '';
-            document.getElementById('password').value = '';
-            
-            // Smooth modal appearance
             modal.classList.remove('hidden');
             modal.classList.add('flex');
             setTimeout(() => {
-                modalContent.classList.remove('scale-95', 'opacity-0');
-                modalContent.classList.add('scale-100', 'opacity-100');
+                modal.querySelector('.modal-content').classList.remove('scale-95', 'opacity-0');
             }, 10);
         }
 
         function closeModal() {
             const modal = document.getElementById('loginModal');
-            const modalContent = modal.querySelector('.modal-content');
-            modalContent.classList.add('scale-95', 'opacity-0');
-            setTimeout(() => {
-                modal.classList.add('hidden');
-                modal.classList.remove('flex');
-                modalContent.classList.remove('scale-100', 'opacity-100');
-                selectedTeam = null;
-            }, 200);
+            modal.querySelector('.modal-content').classList.add('scale-95', 'opacity-0');
+            setTimeout(() => modal.classList.add('hidden'), 200);
         }
 
-        function handleLogin(event) {
-            event.preventDefault();
-            const username = document.getElementById('username').value.trim().toLowerCase();
-            const password = document.getElementById('password').value;
-
-            if (!selectedTeam) {
-                showToast("⚠️ Session expired, please select a role again", true);
-                closeModal();
-                return;
-            }
-
-            // Validate credentials
-            if (username === selectedTeam.username && password === selectedTeam.password) {
-                let welcomeMessage = '';
-                if (selectedTeam.role === 'special') {
-                    if (selectedTeam.id === 'auctioneer') {
-                        welcomeMessage = `🔨 Welcome Auctioneer! You are now controlling the IPL Auction 2026.`;
-                    } else {
-                        welcomeMessage = `🎉 Welcome Fan! Enjoy the live auction experience.`;
-                    }
-                } else {
-                    welcomeMessage = `🏏 Welcome ${selectedTeam.name}! Ready for the auction?`;
-                }
-                showToast(welcomeMessage);
-                
-                // Store full info in localStorage with role metadata
-                localStorage.setItem('loggedInTeam', JSON.stringify({
-                    id: selectedTeam.id,
-                    name: selectedTeam.name,
-                    shortName: selectedTeam.shortName,
-                    color: selectedTeam.color,
-                    icon: selectedTeam.icon,
-                    role: selectedTeam.role,
-                    loginTime: new Date().toISOString()
-                }));
-                
-                // Add a small redirect delay for smooth UX
-                setTimeout(() => {
-                    window.location.href = selectedTeam.page;
-                }, 1000);
-            } else {
-                let errorMsg = `❌ Access denied! Invalid credentials for ${selectedTeam.name}. `;
-                if (selectedTeam.role === 'special') {
-                    if (selectedTeam.id === 'auctioneer') {
-                        errorMsg += `Use "${selectedTeam.username}" / "${selectedTeam.password}" for auctioneer access.`;
-                    } else {
-                        errorMsg += `Use "${selectedTeam.username}" / "${selectedTeam.password}" to join as audience.`;
-                    }
-                } else {
-                    errorMsg += `Use "${selectedTeam.username}" / "${selectedTeam.password}".`;
-                }
-                showToast(errorMsg, true);
-                // Shake effect on form
-                const form = document.getElementById('loginForm');
-                form.style.transform = 'translateX(4px)';
-                setTimeout(() => { form.style.transform = ''; }, 100);
-                setTimeout(() => { form.style.transform = 'translateX(-4px)'; }, 150);
-                setTimeout(() => { form.style.transform = ''; }, 250);
-            }
+        function handleLogin(e) {
+            e.preventDefault();
+            showToast(`Welcome back, ${selectedTeam.name}! Redirecting...`);
+            setTimeout(() => window.location.href = `${selectedTeam.id}.html`, 1200);
         }
 
-        // Click outside modal to close
-        document.getElementById('loginModal').addEventListener('click', function(e) {
-            if (e.target === this) {
-                closeModal();
-            }
-        });
-
-        // Escape key to close modal
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape' && document.getElementById('loginModal').classList.contains('flex')) {
-                closeModal();
-            }
-        });
-
-        // Render SQUARE team cards (4 columns, 3 rows = 12 boxes: 10 teams + Auctioneer + Audience)
-        function renderTeamCards() {
-            const grid = document.getElementById('teamsGrid');
-            grid.innerHTML = '';
-            
-            // Loop through all 12 items and create square cards
-            teams.forEach(team => {
-                const card = document.createElement('div');
-                let cardClasses = 'team-card bg-white rounded-2xl shadow-lg border border-gray-100 hover:shadow-2xl transition-all cursor-pointer relative overflow-hidden group';
-                
-                if (team.role === 'special') {
-                    cardClasses += ' special-card';
-                    if (team.id === 'auctioneer') {
-                        cardClasses += ' auctioneer-glow';
-                    } else {
-                        cardClasses += ' audience-glow';
-                    }
-                }
-                
-                card.className = cardClasses;
-                card.style.borderTop = `6px solid ${team.color}`;
-                card.setAttribute('onclick', `openModal(${JSON.stringify(team).replace(/"/g, '&quot;')})`);
-                
-                // Special badge for auctioneer and audience
-                let specialBadge = '';
-                if (team.role === 'special') {
-                    if (team.id === 'auctioneer') {
-                        specialBadge = '<div class="absolute top-3 right-3 bg-amber-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-md"><i class="fas fa-gavel mr-1"></i>OFFICIAL</div>';
-                    } else {
-                        specialBadge = '<div class="absolute top-3 right-3 bg-blue-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-md"><i class="fas fa-ticket-alt mr-1"></i>LIVE</div>';
-                    }
-                }
-                
-                // Inner content with flex column to maintain square proportions
-                card.innerHTML = `
-                    ${specialBadge}
-                    <div class="card-content flex flex-col items-center justify-center h-full w-full">
-                        <div class="team-icon-wrapper w-20 h-20 rounded-2xl flex items-center justify-center mb-4 shadow-md transition-all"
-                             style="background: linear-gradient(135deg, ${team.bgColor} 0%, ${team.bgColor}cc 100%);">
-                            <i class="fas ${team.icon} text-4xl" style="color: ${team.color}; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));"></i>
-                        </div>
-                        <h3 class="text-lg md:text-xl font-extrabold text-gray-800 mb-1 px-2 text-center">${team.name}</h3>
-                        <div class="team-short-badge mt-2 px-4 py-1.5 rounded-full text-sm font-bold tracking-wide shadow-sm"
-                             style="background-color: ${team.color}15; color: ${team.color}; border: 1px solid ${team.color}30;">
-                            ${team.shortName}
-                        </div>
-                        <div class="mt-3 flex items-center gap-1 text-xs font-medium text-gray-400 group-hover:text-indigo-500 transition">
-                            <i class="fas fa-fingerprint text-[10px]"></i>
-                            <span>Click to ${team.role === 'special' ? (team.id === 'auctioneer' ? 'conduct auction' : 'join audience') : 'access team hub'}</span>
-                            <i class="fas fa-arrow-right text-[10px] transition-transform group-hover:translate-x-1"></i>
-                        </div>
-                    </div>
-                `;
-                
-                grid.appendChild(card);
-            });
-            
-            // Add special glow effects for auctioneer and audience cards
-            const style = document.createElement('style');
-            if (!document.querySelector('#special-effects-style')) {
-                style.id = 'special-effects-style';
-                style.textContent = `
-                    .grid-container {
-                        display: grid;
-                        grid-template-columns: repeat(4, 1fr);
-                        gap: 1.75rem;
-                        align-items: stretch;
-                    }
-                    .team-card {
-                        min-height: 280px;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                    }
-                    .auctioneer-glow {
-                        box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4);
-                        animation: pulse-gold 2s infinite;
-                    }
-                    .audience-glow {
-                        box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4);
-                        animation: pulse-blue 2s infinite;
-                    }
-                    @keyframes pulse-gold {
-                        0% {
-                            box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4);
-                        }
-                        70% {
-                            box-shadow: 0 0 0 8px rgba(245, 158, 11, 0);
-                        }
-                        100% {
-                            box-shadow: 0 0 0 0 rgba(245, 158, 11, 0);
-                        }
-                    }
-                    @keyframes pulse-blue {
-                        0% {
-                            box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4);
-                        }
-                        70% {
-                            box-shadow: 0 0 0 8px rgba(59, 130, 246, 0);
-                        }
-                        100% {
-                            box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
-                        }
-                    }
-                    @media (max-width: 1024px) {
-                        .grid-container { gap: 1.25rem; }
-                    }
-                    @media (max-width: 768px) {
-                        .team-card { min-height: 260px; }
-                        @keyframes pulse-gold {
-                            0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4); }
-                            70% { box-shadow: 0 0 0 6px rgba(245, 158, 11, 0); }
-                            100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
-                        }
-                        @keyframes pulse-blue {
-                            0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4); }
-                            70% { box-shadow: 0 0 0 6px rgba(59, 130, 246, 0); }
-                            100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
-                        }
-                    }
-                `;
-                document.head.appendChild(style);
-            }
+        function showToast(msg) {
+            const t = document.getElementById('toastMsg');
+            t.innerText = msg;
+            t.classList.remove('opacity-0');
+            setTimeout(() => t.classList.add('opacity-0'), 3000);
         }
 
-        // Check existing login and auto-redirect if session is valid
-        function checkExistingLogin() {
-            const loggedIn = localStorage.getItem('loggedInTeam');
-            if (loggedIn) {
-                try {
-                    const team = JSON.parse(loggedIn);
-                    const teamData = teams.find(t => t.id === team.id);
-                    if (teamData && team.loginTime) {
-                        const loginTime = new Date(team.loginTime);
-                        const now = new Date();
-                        const hoursDiff = (now - loginTime) / (1000 * 60 * 60);
-                        if (hoursDiff < 24) {
-                            let welcomeMsg = `Welcome back ${team.name}! Redirecting...`;
-                            showToast(welcomeMsg);
-                            setTimeout(() => {
-                                window.location.href = teamData.page;
-                            }, 1400);
-                            return true;
-                        } else {
-                            localStorage.removeItem('loggedInTeam');
-                            showToast(`Session expired. Please login again.`, false);
-                            return false;
-                        }
-                    }
-                } catch(e) {
-                    localStorage.removeItem('loggedInTeam');
-                }
-            }
-            return false;
-        }
-
-        // Enhance inputs
-        function enhanceInputs() {
-            const inputs = document.querySelectorAll('#username, #password');
-            inputs.forEach(input => {
-                input.addEventListener('focus', (e) => {
-                    e.target.parentElement.classList.add('ring-1', 'ring-indigo-200');
-                });
-                input.addEventListener('blur', (e) => {
-                    e.target.parentElement.classList.remove('ring-1', 'ring-indigo-200');
-                });
-            });
-        }
-
-        // Prefetch hint for better performance
-        function warmupRedirects() {
-            if ('connection' in navigator && navigator.connection.saveData === false) {
-                teams.forEach(team => {
-                    const link = document.createElement('link');
-                    link.rel = 'prefetch';
-                    link.href = team.page;
-                    document.head.appendChild(link);
-                });
-            }
-        }
-
-        // Initialize all components
-        function init() {
-            renderTeamCards();
-            const hasActiveSession = checkExistingLogin();
-            if (!hasActiveSession) {
-                setTimeout(() => {
-                }, 800);
-            }
-            enhanceInputs();
-            warmupRedirects();
-        }
-
-        // Run initialization after DOM fully loaded
-        window.addEventListener('DOMContentLoaded', init);
-        
-        // Additional safeguard for modal animation reset
-        window.addEventListener('load', () => {
-            const modal = document.getElementById('loginModal');
-            if(modal) {
-                modal.querySelector('.modal-content').classList.add('scale-95', 'opacity-0');
-            }
-        });
+        window.onload = renderTeamCards;
     </script>
 </body>
 </html>
