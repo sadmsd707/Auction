@@ -14,6 +14,21 @@
         .team-gradient {
             background: linear-gradient(135deg, #FDB913 0%, #003366 100%);
         }
+        .player-card {
+            transition: all 0.3s ease;
+        }
+        .player-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+        .empty-slot {
+            border: 2px dashed #cbd5e1;
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        }
+        .empty-slot:hover {
+            border-color: #FDB913;
+            background: linear-gradient(135deg, #fff8e7 0%, #fff3e0 100%);
+        }
     </style>
 </head>
 <body>
@@ -56,14 +71,39 @@
                 </div>
             </div>
 
-            <!-- Squad Section -->
+            <!-- Team Squad Section - Split into Retained and Auction Slots -->
+            <div class="bg-white rounded-xl p-6 shadow-lg mb-8">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                    <i class="fas fa-star text-yellow-600"></i>
+                    Retained Players
+                </h2>
+                <div id="retainedPlayers" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <!-- Retained players will be shown here -->
+                </div>
+            </div>
+
             <div class="bg-white rounded-xl p-6 shadow-lg">
                 <h2 class="text-2xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-                    <i class="fas fa-users text-yellow-600"></i>
-                    CSK Squad 2026
+                    <i class="fas fa-gavel text-yellow-600"></i>
+                    Available Slots (To be filled via Auction)
                 </h2>
-                <div id="squadList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <div class="animate-pulse">Loading squad...</div>
+                <p class="text-sm text-gray-500 mb-4">These slots will be filled during the auction process</p>
+                <div id="availableSlots" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <!-- Empty slots will be shown here -->
+                </div>
+            </div>
+
+            <!-- Auction Status Indicator -->
+            <div class="mt-6 bg-gradient-to-r from-yellow-50 to-white rounded-xl p-4 border border-yellow-200">
+                <div class="flex items-center gap-3">
+                    <i class="fas fa-info-circle text-yellow-600 text-xl"></i>
+                    <div>
+                        <p class="text-sm text-gray-600">
+                            <span class="font-semibold text-yellow-600">Auction Status:</span> 
+                            The team currently has <span id="retainedCount" class="font-bold">1</span> retained player. 
+                            <span id="remainingSlots" class="font-bold">24</span> more players to be acquired through auction.
+                        </p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -82,10 +122,40 @@
 
         let database;
         const teamId = "csk";
+        
+        // Define retained players (players already in the team before auction)
+        const retainedPlayers = [
+            { 
+                name: "MS Dhoni", 
+                role: "Wicketkeeper/Batsman", 
+                price: "Retained", 
+                icon: "fa-crown",
+                retained: true,
+                description: "Captain & Icon Player"
+            }
+        ];
+
+        // Define empty slots for auction (total squad size 25, we have 1 retained, so 24 slots)
+        const totalSquadSize = 25;
+        const retainedCount = retainedPlayers.length;
+        const emptySlotsCount = totalSquadSize - retainedCount;
+
+        // Generate empty slots for auction
+        const emptySlots = Array(emptySlotsCount).fill(null).map((_, index) => ({
+            name: `Slot ${index + 1}`,
+            role: "Available for Auction",
+            price: "To be decided",
+            icon: "fa-plus-circle",
+            empty: true
+        }));
 
         function updateBudget(budget) {
             const budgetCr = (budget / 10000000).toFixed(1);
             document.getElementById('budgetDisplay').innerHTML = `₹${budgetCr} Cr`;
+            // Update remaining budget display in slots
+            document.querySelectorAll('.slot-budget').forEach(el => {
+                el.textContent = `Remaining: ₹${budgetCr} Cr`;
+            });
         }
 
         function updateAuctionStatus(data) {
@@ -98,40 +168,154 @@
                 document.getElementById('timerDisplay').textContent = `${mins.toString().padStart(2,'0')}:${secs.toString().padStart(2,'0')}`;
                 
                 if (data.status === 'active') {
-                    document.getElementById('auctionStatus').className = 'text-red-600 font-bold';
+                    document.getElementById('auctionStatus').className = 'text-red-600 font-bold animate-pulse';
                 } else {
                     document.getElementById('auctionStatus').className = 'text-gray-600 font-bold';
+                }
+                
+                // Show auction notification
+                const auctionStatusDiv = document.querySelector('.bg-gradient-to-r');
+                if (data.status === 'active') {
+                    auctionStatusDiv.classList.add('border-red-300', 'bg-red-50');
+                    auctionStatusDiv.classList.remove('border-yellow-200');
+                } else {
+                    auctionStatusDiv.classList.remove('border-red-300', 'bg-red-50');
+                    auctionStatusDiv.classList.add('border-yellow-200');
                 }
             }
         }
 
-        function initFirebase() {
-            const app = firebase.initializeApp(firebaseConfig);
-            database = firebase.database();
+        function renderTeamSquad() {
+            // Render retained players
+            const retainedContainer = document.getElementById('retainedPlayers');
+            retainedContainer.innerHTML = retainedPlayers.map(player => `
+                <div class="player-card bg-gradient-to-r from-yellow-50 to-yellow-100 rounded-lg p-4 border-2 border-yellow-500 shadow-md">
+                    <div class="flex items-start justify-between">
+                        <div class="flex items-center gap-3">
+                            <div class="w-12 h-12 rounded-full bg-yellow-500 flex items-center justify-center">
+                                <i class="fas ${player.icon} text-white text-xl"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-gray-800 text-lg">${player.name}</h3>
+                                <p class="text-sm text-gray-600">${player.role}</p>
+                                <p class="text-xs text-yellow-600 font-semibold mt-1">${player.description}</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <span class="inline-block px-3 py-1 bg-yellow-500 text-white text-xs rounded-full font-bold">
+                                ${player.price}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            // Render empty slots (available for auction)
+            const slotsContainer = document.getElementById('availableSlots');
+            slotsContainer.innerHTML = emptySlots.map(slot => `
+                <div class="player-card empty-slot rounded-lg p-4 transition-all cursor-pointer">
+                    <div class="flex items-start justify-between">
+                        <div class="flex items-center gap-3">
+                            <div class="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center">
+                                <i class="fas ${slot.icon} text-gray-400 text-xl"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-semibold text-gray-600">${slot.name}</h3>
+                                <p class="text-sm text-gray-500">${slot.role}</p>
+                                <p class="text-xs text-gray-400 mt-1">Waiting for auction</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <span class="inline-block px-3 py-1 bg-gray-200 text-gray-500 text-xs rounded-full">
+                                ${slot.price}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            // Update counters
+            document.getElementById('retainedCount').textContent = retainedPlayers.length;
+            document.getElementById('remainingSlots').textContent = emptySlotsCount;
+        }
+
+        // Listen for real-time updates from auction (when a player is bought)
+        function listenForPlayerPurchases() {
+            if (!database) return;
             
-            database.ref(`teams/${teamId}`).on('value', (snap) => {
-                if (snap.exists()) updateBudget(snap.val().budget);
-            });
-            
-            database.ref('current_auction').on('value', (snap) => {
-                if (snap.exists()) updateAuctionStatus(snap.val());
+            // Listen for purchased players (you can implement this in your auction logic)
+            database.ref('purchased_players').on('child_added', (snapshot) => {
+                const purchasedPlayer = snapshot.val();
+                if (purchasedPlayer.team === teamId) {
+                    // Add player to squad and remove from empty slots
+                    addPlayerToSquad(purchasedPlayer);
+                }
             });
         }
 
+        // Function to add a newly purchased player to the squad
+        function addPlayerToSquad(player) {
+            // This would update the UI when a player is bought in auction
+            const newPlayer = {
+                name: player.name,
+                role: player.role,
+                price: `₹${(player.price / 10000000).toFixed(1)} Cr`,
+                icon: "fa-user-check",
+                retained: false,
+                description: "New Auction Buy"
+            };
+            
+            // In a real implementation, you'd update Firebase and re-render
+            console.log(`New player purchased for ${teamId}: ${player.name}`);
+            
+            // Show notification
+            showToast(`🎉 New player acquired: ${player.name} for ₹${(player.price / 10000000).toFixed(1)} Cr!`);
+        }
+
+        function showToast(message, isError = false) {
+            const toast = document.createElement('div');
+            toast.className = 'fixed bottom-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-bounce';
+            toast.innerHTML = `<i class="fas fa-trophy mr-2"></i>${message}`;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        function initFirebase() {
+            try {
+                const app = firebase.initializeApp(firebaseConfig);
+                database = firebase.database();
+                
+                database.ref(`teams/${teamId}`).on('value', (snap) => {
+                    if (snap.exists()) updateBudget(snap.val().budget);
+                });
+                
+                database.ref('current_auction').on('value', (snap) => {
+                    if (snap.exists()) updateAuctionStatus(snap.val());
+                });
+                
+                listenForPlayerPurchases();
+            } catch (error) {
+                console.error("Firebase initialization error:", error);
+                // Still render the UI even without Firebase
+                renderTeamSquad();
+            }
+        }
+
+        // Initialize and render
         initFirebase();
-        
-        const squad = [
-            "MS Dhoni (C)", "Ruturaj Gaikwad", "Devon Conway", "Ajinkya Rahane", "Shivam Dube",
-            "Ravindra Jadeja", "Moeen Ali", "Deepak Chahar", "Tushar Deshpande", "Matheesha Pathirana",
-            "Maheesh Theekshana", "Mitchell Santner", "Rajvardhan Hangargekar"
-        ];
-        
-        document.getElementById('squadList').innerHTML = squad.map(player => `
-            <div class="bg-gradient-to-r from-yellow-50 to-white rounded-lg p-3 border border-yellow-200 hover:shadow-md transition">
-                <i class="fas fa-user-circle text-yellow-600 mr-2"></i>
-                <span class="text-gray-700 font-medium">${player}</span>
-            </div>
-        `).join('');
+        renderTeamSquad();
+
+        // Add some interactive explanation on empty slots
+        document.querySelectorAll('.empty-slot').forEach((slot, index) => {
+            slot.addEventListener('click', () => {
+                const auctionStatus = document.getElementById('auctionStatus').textContent;
+                if (auctionStatus.includes('LIVE')) {
+                    showToast(`Slot ${index + 1} is ready for bidding! Watch the auctioneer.`);
+                } else {
+                    showToast(`⏰ Auction is not active yet. Wait for auctioneer to start.`, true);
+                }
+            });
+        });
     </script>
 </body>
 </html>
