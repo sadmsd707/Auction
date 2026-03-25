@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MI | Mumbai Indians - IPL Auction 2026</title>
+    <title>MI | Mumbai Indians - IPL Auction 2026 | Player Selection</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -14,22 +14,52 @@
         .team-gradient {
             background: linear-gradient(135deg, #004BA0 0%, #D1AB3E 100%);
         }
+        .player-card {
+            transition: all 0.3s ease;
+        }
+        .player-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+        .available-player {
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .available-player:hover {
+            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+            transform: translateX(4px);
+        }
+        .selected-player-card {
+            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+            border-left: 4px solid #004BA0;
+        }
+        .toast-notification {
+            animation: slideInRight 0.3s ease-out, fadeOut 0.3s ease-in 2.7s forwards;
+        }
+        @keyframes slideInRight {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes fadeOut {
+            to { opacity: 0; visibility: hidden; }
+        }
     </style>
 </head>
 <body>
     <div class="min-h-screen">
-        <div class="team-gradient text-white py-8 px-6 shadow-lg">
+        <!-- Header with MI Team Colors -->
+        <div class="team-gradient text-white py-6 px-6 shadow-lg">
             <div class="max-w-7xl mx-auto">
                 <div class="flex justify-between items-center flex-wrap gap-4">
                     <div>
-                        <h1 class="text-5xl font-black flex items-center gap-3">
+                        <h1 class="text-4xl md:text-5xl font-black flex items-center gap-3">
                             <i class="fas fa-star-of-life text-yellow-400"></i>
                             Mumbai Indians
                         </h1>
-                        <p class="text-yellow-100 mt-2">🔵 Duniya Hila Denge Hum #OneFamily</p>
+                        <p class="text-yellow-100 mt-2">🔵 Duniya Hila Denge Hum #OneFamily | IPL Auction 2026</p>
                     </div>
                     <div class="text-right bg-white/10 backdrop-blur rounded-xl px-6 py-3">
-                        <div class="text-3xl font-bold" id="budgetDisplay">₹12.0 Cr</div>
+                        <div class="text-3xl font-bold" id="budgetDisplay">₹18.0 Cr</div>
                         <p class="text-yellow-100 text-sm">Remaining Purse</p>
                     </div>
                 </div>
@@ -37,36 +67,107 @@
         </div>
 
         <div class="max-w-7xl mx-auto px-6 py-8">
+            <!-- Auction Status Card -->
             <div class="bg-white rounded-xl p-6 mb-8 shadow-lg border-l-4 border-blue-600">
                 <div class="flex flex-wrap justify-between items-center gap-4">
                     <div>
-                        <h2 class="text-2xl font-bold text-gray-800">Current Auction Status</h2>
-                        <p class="text-gray-500 mt-1">Live updates from auctioneer</p>
+                        <h2 class="text-2xl font-bold text-gray-800">MI Auction Room</h2>
+                        <p class="text-gray-500 mt-1">Select players for Mumbai Indians • No duplicate picks allowed</p>
                     </div>
                     <div class="text-right bg-blue-50 rounded-lg px-6 py-3">
-                        <div class="text-3xl font-mono font-bold text-blue-600" id="timerDisplay">00:00</div>
-                        <p class="text-gray-500 text-sm">Time Remaining</p>
+                        <div class="text-2xl font-mono font-bold text-blue-600" id="selectedCount">0</div>
+                        <p class="text-gray-500 text-sm">Players Selected</p>
                     </div>
                 </div>
-                <div class="mt-4 p-4 bg-gray-50 rounded-lg">
-                    <p class="text-gray-700"><span class="text-blue-600 font-bold text-lg">Current Player:</span> <span id="currentPlayer" class="text-gray-900 text-xl font-bold ml-2">—</span></p>
-                    <p class="text-gray-500 text-sm mt-2"><i class="fas fa-gavel text-blue-600"></i> Auction is <span id="auctionStatus" class="text-blue-600 font-bold">Inactive</span></p>
+                <div class="mt-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg">
+                    <div class="flex items-center gap-3 flex-wrap">
+                        <i class="fas fa-info-circle text-blue-600 text-xl"></i>
+                        <p class="text-gray-700"><span class="font-bold text-blue-600">Selection Rules:</span> Click on any available player to add to MI squad. 
+                        <span class="font-semibold text-red-500">Each player can be selected only once</span> — no duplicate selections allowed!</p>
+                    </div>
                 </div>
             </div>
 
-            <div class="bg-white rounded-xl p-6 shadow-lg">
-                <h2 class="text-2xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-                    <i class="fas fa-users text-blue-600"></i>
-                    MI Squad 2026
-                </h2>
-                <div id="squadList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <div class="animate-pulse">Loading squad...</div>
+            <!-- Two Column Layout: Available Players (Left) | Selected Squad (Right) -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- LEFT COLUMN: Available Players Pool -->
+                <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+                    <div class="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4">
+                        <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                            <i class="fas fa-users"></i>
+                            Available Players (IPL Auction 2026)
+                        </h2>
+                        <p class="text-blue-100 text-sm mt-1">Click any player to add • Total: <span id="availableCount">0</span> players left</p>
+                    </div>
+                    <div id="availablePlayersList" class="p-5 max-h-[600px] overflow-y-auto space-y-3">
+                        <div class="text-center py-8 text-gray-400">Loading players...</div>
+                    </div>
                 </div>
+
+                <!-- RIGHT COLUMN: MI Squad (Selected Players) -->
+                <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+                    <div class="bg-gradient-to-r from-blue-700 to-indigo-700 px-6 py-4">
+                        <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                            <i class="fas fa-star-of-life"></i>
+                            Mumbai Indians Squad 2026
+                        </h2>
+                        <p class="text-blue-100 text-sm mt-1">Selected Players (<span id="selectedSquadCount">0</span>/<span id="maxSquadSize">18</span>) • Spent: ₹<span id="purseSpent">0</span> Cr</p>
+                    </div>
+                    <div id="selectedSquadList" class="p-5 min-h-[500px] max-h-[600px] overflow-y-auto">
+                        <div class="text-center py-12 text-gray-400">
+                            <i class="fas fa-hand-pointer text-4xl mb-3 opacity-50"></i>
+                            <p>No players selected yet</p>
+                            <p class="text-sm mt-1">Click on available players to build your MI squad</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stats Cards -->
+            <div class="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="bg-white rounded-xl p-5 shadow-md border border-gray-200">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-500 text-sm">Total Budget</p>
+                            <p class="text-2xl font-bold text-gray-800">₹18.0 Cr</p>
+                        </div>
+                        <i class="fas fa-coins text-3xl text-blue-500"></i>
+                    </div>
+                </div>
+                <div class="bg-white rounded-xl p-5 shadow-md border border-gray-200">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-500 text-sm">Remaining Purse</p>
+                            <p class="text-2xl font-bold text-blue-600" id="remainingBudgetDisplay">₹18.0 Cr</p>
+                        </div>
+                        <i class="fas fa-chart-line text-3xl text-blue-500"></i>
+                    </div>
+                </div>
+                <div class="bg-white rounded-xl p-5 shadow-md border border-gray-200">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-500 text-sm">Slots Remaining</p>
+                            <p class="text-2xl font-bold text-indigo-600" id="slotsRemaining">18</p>
+                        </div>
+                        <i class="fas fa-layer-group text-3xl text-indigo-500"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Reset Button -->
+            <div class="mt-6 flex justify-end">
+                <button id="resetSelectionBtn" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-3 px-6 rounded-xl transition-all duration-200 flex items-center gap-2 shadow-md">
+                    <i class="fas fa-undo-alt"></i>
+                    Reset All Selections
+                </button>
             </div>
         </div>
     </div>
 
+    <div id="toast-container" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2"></div>
+
     <script>
+        // ======================= FIREBASE CONFIG =======================
         const firebaseConfig = {
             apiKey: "YOUR_API_KEY",
             authDomain: "YOUR_AUTH_DOMAIN",
@@ -79,51 +180,394 @@
 
         let database;
         const teamId = "mi";
+        
+        // ======================= ALL AVAILABLE PLAYERS FOR MI (UNIQUE) =======================
+        // All players available for auction - no pre-selected players
+        const allPlayers = [
+            { id: 1, name: "Rohit Sharma", role: "Opening Batter", basePrice: 3.5, icon: "fa-crown", country: "India", specialty: "Hitman & Leader" },
+            { id: 2, name: "Hardik Pandya", role: "All-rounder", basePrice: 3.5, icon: "fa-star", country: "India", specialty: "Dynamic All-rounder" },
+            { id: 3, name: "Jasprit Bumrah", role: "Fast Bowler", basePrice: 3.5, icon: "fa-bolt", country: "India", specialty: "Yorker King" },
+            { id: 4, name: "Suryakumar Yadav", role: "Middle-order Batter", basePrice: 3.0, icon: "fa-star", country: "India", specialty: "360° Player" },
+            { id: 5, name: "Ishan Kishan", role: "Wicketkeeper Batter", basePrice: 2.5, icon: "fa-glove", country: "India", specialty: "Explosive Opener" },
+            { id: 6, name: "Tilak Varma", role: "Top-order Batter", basePrice: 1.8, icon: "fa-running", country: "India", specialty: "Young Sensation" },
+            { id: 7, name: "Tim David", role: "Power Hitter", basePrice: 1.5, icon: "fa-bolt", country: "Australia", specialty: "Finisher" },
+            { id: 8, name: "Cameron Green", role: "All-rounder", basePrice: 2.5, icon: "fa-star", country: "Australia", specialty: "Tall All-rounder" },
+            { id: 9, name: "Piyush Chawla", role: "Leg Spinner", basePrice: 1.0, icon: "fa-magic", country: "India", specialty: "Veteran Wicket-taker" },
+            { id: 10, name: "Jason Behrendorff", role: "Left-arm Pacer", basePrice: 1.0, icon: "fa-wind", country: "Australia", specialty: "Swing Bowler" },
+            { id: 11, name: "Akash Madhwal", role: "Fast Bowler", basePrice: 0.8, icon: "fa-bolt", country: "India", specialty: "Medium Pace" },
+            { id: 12, name: "Nehal Wadhera", role: "Middle-order Batter", basePrice: 0.6, icon: "fa-running", country: "India", specialty: "Promising Talent" },
+            { id: 13, name: "Jofra Archer", role: "Fast Bowler", basePrice: 2.5, icon: "fa-bolt", country: "England", specialty: "Express Pace & Bounce" },
+            { id: 14, name: "Trent Boult", role: "Left-arm Pacer", basePrice: 2.0, icon: "fa-wind", country: "New Zealand", specialty: "Swing King" },
+            { id: 15, name: "Kieron Pollard", role: "All-rounder", basePrice: 2.0, icon: "fa-crown", country: "West Indies", specialty: "Six-Hitting Machine" },
+            { id: 16, name: "Dewald Brevis", role: "Top-order Batter", basePrice: 1.2, icon: "fa-bolt", country: "South Africa", specialty: "Baby AB" },
+            { id: 17, name: "Kumar Kartikeya", role: "Left-arm Spinner", basePrice: 0.5, icon: "fa-leaf", country: "India", specialty: "Mystery Spinner" },
+            { id: 18, name: "Arjun Tendulkar", role: "All-rounder", basePrice: 0.4, icon: "fa-star", country: "India", specialty: "Left-arm Medium" }
+        ];
 
-        function updateBudget(budget) {
-            const budgetCr = (budget / 10000000).toFixed(1);
-            document.getElementById('budgetDisplay').innerHTML = `₹${budgetCr} Cr`;
+        // Team configuration
+        const MAX_SQUAD_SIZE = 18;
+        const TOTAL_BUDGET_CRORES = 18.0;
+        
+        // Application State
+        let selectedPlayers = [];
+        let currentBudget = TOTAL_BUDGET_CRORES;
+        
+        // Helper: Show Toast Notification
+        function showToast(message, isError = false, isSuccess = false) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            const bgColor = isError ? 'bg-red-500' : (isSuccess ? 'bg-green-500' : 'bg-blue-500');
+            const icon = isError ? 'fa-exclamation-triangle' : (isSuccess ? 'fa-check-circle' : 'fa-info-circle');
+            toast.className = `${bgColor} text-white px-5 py-3 rounded-lg shadow-lg flex items-center gap-2 toast-notification font-medium`;
+            toast.innerHTML = `<i class="fas ${icon} mr-1"></i>${message}`;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.remove();
+                if (container.children.length === 0) container.remove();
+            }, 2800);
         }
-
+        
+        // Update UI Stats
+        function updateStats() {
+            const spent = TOTAL_BUDGET_CRORES - currentBudget;
+            document.getElementById('purseSpent').textContent = spent.toFixed(1);
+            document.getElementById('remainingBudgetDisplay').innerHTML = `₹${currentBudget.toFixed(1)} Cr`;
+            document.getElementById('budgetDisplay').innerHTML = `₹${currentBudget.toFixed(1)} Cr`;
+            document.getElementById('selectedCount').textContent = selectedPlayers.length;
+            document.getElementById('selectedSquadCount').textContent = selectedPlayers.length;
+            const slotsLeft = MAX_SQUAD_SIZE - selectedPlayers.length;
+            document.getElementById('slotsRemaining').textContent = slotsLeft;
+            
+            const availablePlayersFiltered = allPlayers.filter(p => !selectedPlayers.some(selected => selected.id === p.id));
+            document.getElementById('availableCount').textContent = availablePlayersFiltered.length;
+        }
+        
+        // Update Auction Status (from Firebase)
         function updateAuctionStatus(data) {
             if (data) {
-                document.getElementById('currentPlayer').textContent = data.activePlayer || '—';
-                document.getElementById('auctionStatus').textContent = data.status === 'active' ? 'LIVE 🔴' : 'Inactive ⏸️';
-                const timer = data.timerRemaining || 0;
-                const mins = Math.floor(timer / 60);
-                const secs = timer % 60;
-                document.getElementById('timerDisplay').textContent = `${mins.toString().padStart(2,'0')}:${secs.toString().padStart(2,'0')}`;
+                const currentPlayerSpan = document.getElementById('currentPlayer');
+                const auctionStatusSpan = document.getElementById('auctionStatus');
+                const timerDisplaySpan = document.getElementById('timerDisplay');
                 
-                if (data.status === 'active') {
-                    document.getElementById('auctionStatus').className = 'text-red-600 font-bold';
-                } else {
-                    document.getElementById('auctionStatus').className = 'text-gray-600 font-bold';
+                if (currentPlayerSpan) currentPlayerSpan.textContent = data.activePlayer || '—';
+                if (auctionStatusSpan) {
+                    auctionStatusSpan.textContent = data.status === 'active' ? 'LIVE 🔴' : 'Inactive ⏸️';
+                    if (data.status === 'active') {
+                        auctionStatusSpan.className = 'text-red-600 font-bold animate-pulse';
+                    } else {
+                        auctionStatusSpan.className = 'text-gray-600 font-bold';
+                    }
+                }
+                
+                if (timerDisplaySpan) {
+                    const timer = data.timerRemaining || 0;
+                    const mins = Math.floor(timer / 60);
+                    const secs = timer % 60;
+                    timerDisplaySpan.textContent = `${mins.toString().padStart(2,'0')}:${secs.toString().padStart(2,'0')}`;
                 }
             }
         }
-
-        function initFirebase() {
-            const app = firebase.initializeApp(firebaseConfig);
-            database = firebase.database();
+        
+        // Update Budget from Firebase
+        function updateBudget(budget) {
+            if (budget) {
+                currentBudget = budget / 10000000;
+                updateStats();
+            }
+        }
+        
+        // Render Available Players (Left Side) - Only players NOT selected
+        function renderAvailablePlayers() {
+            const container = document.getElementById('availablePlayersList');
+            const unselectedPlayers = allPlayers.filter(player => 
+                !selectedPlayers.some(selected => selected.id === player.id)
+            );
             
-            database.ref(`teams/${teamId}`).on('value', (snap) => {
-                if (snap.exists()) updateBudget(snap.val().budget);
+            if (unselectedPlayers.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-12">
+                        <i class="fas fa-check-circle text-5xl text-green-400 mb-3"></i>
+                        <p class="text-gray-500 font-medium">All players have been selected!</p>
+                        <p class="text-sm text-gray-400 mt-1">Squad is full or no players left</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = unselectedPlayers.map(player => `
+                <div class="available-player bg-white rounded-lg p-4 shadow-sm border-2 border-gray-100 hover:border-blue-400 transition-all flex items-center justify-between" data-player-id="${player.id}">
+                    <div class="flex items-center gap-3">
+                        <div class="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white shadow-md">
+                            <i class="fas ${player.icon} text-xl"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-gray-800 text-md">${player.name}</h3>
+                            <div class="flex flex-wrap gap-2 mt-1">
+                                <span class="text-xs bg-gray-100 px-2 py-1 rounded-full text-gray-600">${player.role}</span>
+                                <span class="text-xs bg-blue-50 px-2 py-1 rounded-full text-blue-600">${player.country}</span>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1">${player.specialty}</p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <div class="font-bold text-blue-600 text-lg">₹${player.basePrice} Cr</div>
+                        <button class="select-player-btn mt-2 bg-blue-500 hover:bg-blue-600 text-white text-xs font-bold py-1.5 px-3 rounded-full transition-all shadow-sm">
+                            <i class="fas fa-plus-circle mr-1"></i> Select
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+            
+            // Attach click handlers to select buttons
+            document.querySelectorAll('.select-player-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const parentCard = btn.closest('.available-player');
+                    const playerId = parseInt(parentCard.dataset.playerId);
+                    const playerToSelect = allPlayers.find(p => p.id === playerId);
+                    if (playerToSelect) selectPlayer(playerToSelect);
+                });
             });
             
-            database.ref('current_auction').on('value', (snap) => {
-                if (snap.exists()) updateAuctionStatus(snap.val());
+            // Also make the whole card clickable
+            document.querySelectorAll('.available-player').forEach(card => {
+                card.addEventListener('click', (e) => {
+                    if (e.target.closest('.select-player-btn')) return;
+                    const playerId = parseInt(card.dataset.playerId);
+                    const playerToSelect = allPlayers.find(p => p.id === playerId);
+                    if (playerToSelect) selectPlayer(playerToSelect);
+                });
             });
         }
-
-        initFirebase();
         
-        const squad = ["Rohit Sharma (C)", "Hardik Pandya", "Jasprit Bumrah", "Suryakumar Yadav", "Ishan Kishan", "Tilak Varma", "Tim David", "Cameron Green", "Piyush Chawla", "Jason Behrendorff", "Akash Madhwal", "Nehal Wadhera"];
-        document.getElementById('squadList').innerHTML = squad.map(player => `
-            <div class="bg-gradient-to-r from-blue-50 to-white rounded-lg p-3 border border-blue-200 hover:shadow-md transition">
-                <i class="fas fa-user-circle text-blue-600 mr-2"></i>
-                <span class="text-gray-700 font-medium">${player}</span>
-            </div>
-        `).join('');
+        // Core selection logic: NO DUPLICATES
+        function selectPlayer(player) {
+            // Validation 1: Check if already selected
+            const alreadySelected = selectedPlayers.some(p => p.id === player.id);
+            if (alreadySelected) {
+                showToast(`❌ ${player.name} is already in MI squad! Cannot select same player twice.`, true);
+                return false;
+            }
+            
+            // Validation 2: Check squad size limit
+            if (selectedPlayers.length >= MAX_SQUAD_SIZE) {
+                showToast(`⚠️ Squad is full! Maximum ${MAX_SQUAD_SIZE} players allowed. Remove some players first.`, true);
+                return false;
+            }
+            
+            // Validation 3: Check budget availability
+            if (currentBudget < player.basePrice) {
+                showToast(`💰 Insufficient budget! Need ₹${player.basePrice} Cr but only ₹${currentBudget.toFixed(1)} Cr left.`, true);
+                return false;
+            }
+            
+            // All validations passed - Add player to squad
+            selectedPlayers.push({ ...player });
+            currentBudget -= player.basePrice;
+            
+            // Update UI
+            updateStats();
+            renderAvailablePlayers();    // Refresh left panel (remove selected player)
+            renderSelectedSquad();       // Refresh right panel (show newly added)
+            
+            // Success toast
+            showToast(`✅ ${player.name} added to MI squad! (₹${player.basePrice} Cr)`, false, true);
+            
+            // Firebase sync
+            if (database) {
+                database.ref(`teams/${teamId}/selectedPlayers`).set(selectedPlayers);
+                database.ref(`teams/${teamId}/budget`).set(currentBudget * 10000000);
+            }
+            
+            return true;
+        }
+        
+        // Remove player from squad
+        function removePlayer(playerId) {
+            const playerToRemove = selectedPlayers.find(p => p.id === playerId);
+            if (!playerToRemove) return;
+            
+            // Remove from selected array
+            selectedPlayers = selectedPlayers.filter(p => p.id !== playerId);
+            currentBudget += playerToRemove.basePrice;
+            
+            // Update UI
+            updateStats();
+            renderAvailablePlayers();    // Show the player again in available list
+            renderSelectedSquad();       // Refresh squad display
+            
+            showToast(`🔄 Removed ${playerToRemove.name} from squad. ₹${playerToRemove.basePrice} Cr added back to purse.`, false);
+            
+            // Sync with Firebase
+            if (database) {
+                database.ref(`teams/${teamId}/selectedPlayers`).set(selectedPlayers);
+                database.ref(`teams/${teamId}/budget`).set(currentBudget * 10000000);
+            }
+        }
+        
+        // Render Selected Squad (Right Side)
+        function renderSelectedSquad() {
+            const container = document.getElementById('selectedSquadList');
+            
+            if (selectedPlayers.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-12">
+                        <i class="fas fa-users-slash text-5xl text-gray-300 mb-3"></i>
+                        <p class="text-gray-400 font-medium">No players selected yet</p>
+                        <p class="text-sm text-gray-400 mt-1">Click on available players to build your MI squad</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Sort players by price descending
+            const sortedPlayers = [...selectedPlayers].sort((a, b) => b.basePrice - a.basePrice);
+            
+            container.innerHTML = sortedPlayers.map((player, index) => `
+                <div class="selected-player-card bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 mb-3 shadow-sm hover:shadow-md transition-all">
+                    <div class="flex items-start justify-between">
+                        <div class="flex items-center gap-3 flex-1">
+                            <div class="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white shadow-md">
+                                <i class="fas ${player.icon} text-xl"></i>
+                            </div>
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2 flex-wrap">
+                                    <h3 class="font-bold text-gray-800 text-lg">${player.name}</h3>
+                                    <span class="text-xs bg-blue-200 text-blue-800 px-2 py-0.5 rounded-full">Pick #${index + 1}</span>
+                                </div>
+                                <div class="flex flex-wrap gap-2 mt-1">
+                                    <span class="text-xs bg-white px-2 py-1 rounded-full text-gray-600 shadow-sm">${player.role}</span>
+                                    <span class="text-xs bg-blue-50 px-2 py-1 rounded-full text-blue-600">${player.country}</span>
+                                    <span class="text-xs bg-indigo-50 px-2 py-1 rounded-full text-indigo-700">${player.specialty}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div class="font-bold text-blue-600 text-lg">₹${player.basePrice} Cr</div>
+                            <button class="remove-player-btn mt-2 bg-red-100 hover:bg-red-500 text-red-600 hover:text-white text-xs font-bold py-1.5 px-3 rounded-full transition-all duration-200">
+                                <i class="fas fa-trash-alt mr-1"></i> Remove
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+            
+            // Attach remove handlers
+            document.querySelectorAll('.remove-player-btn').forEach((btn, idx) => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const playerToRemove = sortedPlayers[idx];
+                    if (playerToRemove) removePlayer(playerToRemove.id);
+                });
+            });
+        }
+        
+        // Reset all selections
+        function resetAllSelections() {
+            if (selectedPlayers.length === 0) {
+                showToast("No selections to reset.", false);
+                return;
+            }
+            
+            const confirmReset = confirm(`⚠️ Reset all selections? ${selectedPlayers.length} players will be removed and budget restored to ₹${TOTAL_BUDGET_CRORES} Cr.`);
+            if (!confirmReset) return;
+            
+            selectedPlayers = [];
+            currentBudget = TOTAL_BUDGET_CRORES;
+            
+            updateStats();
+            renderAvailablePlayers();
+            renderSelectedSquad();
+            
+            showToast("🔄 All selections have been reset. Squad is empty now.", false);
+            
+            if (database) {
+                database.ref(`teams/${teamId}/selectedPlayers`).set([]);
+                database.ref(`teams/${teamId}/budget`).set(currentBudget * 10000000);
+            }
+        }
+        
+        // Initialize Firebase (if configured)
+        function initFirebase() {
+            if (firebaseConfig.apiKey !== "YOUR_API_KEY" && firebaseConfig.databaseURL !== "https://YOUR_PROJECT-default-rtdb.firebaseio.com") {
+                try {
+                    const app = firebase.initializeApp(firebaseConfig);
+                    database = firebase.database();
+                    
+                    // Load existing team data
+                    database.ref(`teams/${teamId}`).once('value', (snap) => {
+                        if (snap.exists()) {
+                            const data = snap.val();
+                            if (data.selectedPlayers && Array.isArray(data.selectedPlayers)) {
+                                selectedPlayers = data.selectedPlayers;
+                                currentBudget = data.budget ? data.budget / 10000000 : TOTAL_BUDGET_CRORES;
+                                updateStats();
+                                renderAvailablePlayers();
+                                renderSelectedSquad();
+                                showToast("📡 Squad synced from auction dashboard", false);
+                            }
+                        }
+                    });
+                    
+                    // Listen for budget updates
+                    database.ref(`teams/${teamId}/budget`).on('value', (snap) => {
+                        if (snap.exists()) {
+                            currentBudget = snap.val() / 10000000;
+                            updateStats();
+                        }
+                    });
+                    
+                    // Listen for auction status
+                    database.ref('current_auction').on('value', (snap) => {
+                        if (snap.exists()) updateAuctionStatus(snap.val());
+                    });
+                    
+                    // Listen for external changes to selected players
+                    database.ref(`teams/${teamId}/selectedPlayers`).on('value', (snap) => {
+                        if (snap.exists() && JSON.stringify(snap.val()) !== JSON.stringify(selectedPlayers)) {
+                            selectedPlayers = snap.val() || [];
+                            updateStats();
+                            renderAvailablePlayers();
+                            renderSelectedSquad();
+                            showToast("🔄 Squad updated from auctioneer", false);
+                        }
+                    });
+                } catch (error) {
+                    console.warn("Firebase optional, running in standalone mode");
+                }
+            } else {
+                // Demo mode: set up mock auction status for visual effect
+                setInterval(() => {
+                    const statusSpan = document.getElementById('auctionStatus');
+                    if (statusSpan && !database) {
+                        const isActive = Math.random() > 0.7;
+                        if (isActive) {
+                            updateAuctionStatus({ status: 'active', timerRemaining: 35, activePlayer: '🔥 Hot Player on Auction' });
+                        } else {
+                            updateAuctionStatus({ status: 'inactive', timerRemaining: 0, activePlayer: '—' });
+                        }
+                    }
+                }, 10000);
+            }
+        }
+        
+        // Initialize the application
+        function init() {
+            initFirebase();
+            renderAvailablePlayers();
+            renderSelectedSquad();
+            updateStats();
+            
+            // Set max squad size display
+            document.getElementById('maxSquadSize').textContent = MAX_SQUAD_SIZE;
+            
+            // Reset button event
+            const resetBtn = document.getElementById('resetSelectionBtn');
+            if (resetBtn) resetBtn.addEventListener('click', resetAllSelections);
+        }
+        
+        // Start the app
+        init();
     </script>
 </body>
 </html>
