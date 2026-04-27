@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>SRH Auction House | Sunrisers Hyderabad Buyer Terminal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,600;14..32,700;14..32,800&display=swap');
+        * { font-family: 'Inter', sans-serif; }
+        
+        /* SRH theme: orange & black accents */
+        .bid-btn {
+            transition: all 0.2s ease;
+        }
+        .bid-btn:active {
+            transform: scale(0.96);
+        }
+        .pulse-timer {
+            animation: softPulse 1.2s infinite;
+        }
+        @keyframes softPulse {
+            0% { opacity: 0.7; text-shadow: 0 0 0px #F26522; }
+            50% { opacity: 1; text-shadow: 0 0 3px #F26522; }
+            100% { opacity: 0.7; text-shadow: 0 0 0px #F26522; }
+        }
+        .player-card {
+            transition: all 0.2s ease;
+        }
+        .player-card:hover {
+            background-color: #fff0e6;
+            transform: translateX(4px);
+        }
+        .toast-message {
+            animation: slideUp 0.25s ease-out forwards;
+        }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .bid-history-badge {
+            background: linear-gradient(135deg, #FFF0E6, #FFE0CC);
+        }
+        .scroll-custom::-webkit-scrollbar {
+            width: 5px;
+        }
+        .scroll-custom::-webkit-scrollbar-track {
+            background: #eef2ff;
+            border-radius: 10px;
+        }
+        .scroll-custom::-webkit-scrollbar-thumb {
+            background: #F26522;
+            border-radius: 10px;
+        }
+        .win-glow {
+            box-shadow: 0 0 0 0 rgba(34,197,94,0.4);
+            animation: winPulse 0.8s ease-out;
+        }
+        @keyframes winPulse {
+            0% { box-shadow: 0 0 0 0 rgba(34,197,94,0.6); }
+            70% { box-shadow: 0 0 0 12px rgba(34,197,94,0); }
+            100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); }
+        }
+        .team-gradient-bg {
+            background: linear-gradient(135deg, #F26522 0%, #000000 100%);
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-slate-50 to-gray-100">
+
+    <!-- HEADER with live sync indicator (SRH branding) -->
+    <div class="bg-white border-b-4 border-orange-500 shadow-sm sticky top-0 z-20">
+        <div class="max-w-7xl mx-auto px-5 py-4 flex flex-col md:flex-row justify-between items-center gap-3">
+            <div class="flex items-center gap-3">
+                <div class="w-12 h-12 rounded-full bg-gradient-to-tr from-[#F26522] to-[#000000] flex items-center justify-center shadow-md">
+                    <i class="fas fa-sun text-white text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-2xl md:text-3xl font-black tracking-tight text-gray-800">🏏 SRH <span class="text-orange-600">AUCTION TERMINAL</span></h1>
+                    <p class="text-xs text-gray-500 flex items-center gap-2"><i class="fas fa-sync-alt text-green-500 text-[10px] animate-spin" id="liveIcon"></i> <span id="syncStatusText">Live · Firebase</span></p>
+                </div>
+            </div>
+            <div class="flex gap-4 bg-gray-100 px-5 py-2 rounded-2xl shadow-inner">
+                <div class="text-center">
+                    <p class="text-xs text-gray-500 font-medium">REMAINING PURSE</p>
+                    <p class="text-2xl font-black text-emerald-700" id="budgetDisplay">₹18.00 Cr</p>
+                </div>
+                <div class="border-l border-gray-300"></div>
+                <div class="text-center">
+                    <p class="text-xs text-gray-500 font-medium">SQUAD SIZE</p>
+                    <p class="text-2xl font-black text-orange-700" id="squadCountDisplay">0/18</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="max-w-7xl mx-auto px-5 py-6 md:py-8">
+        <!-- LIVE AUCTION STAGE (Syncs with auctioneer) -->
+        <div class="bg-white rounded-2xl shadow-xl border border-orange-200 overflow-hidden mb-8">
+            <div class="team-gradient-bg px-6 py-3 flex justify-between items-center">
+                <div class="flex items-center gap-2">
+                    <i class="fas fa-gavel text-white text-lg"></i>
+                    <h2 class="font-bold text-white">🔥 LIVE AUCTION STAGE</h2>
+                    <span class="bg-white/30 text-white text-[10px] font-bold px-2 py-0.5 rounded-full animate-pulse">SYNCED</span>
+                </div>
+                <div class="bg-white/20 px-3 py-1 rounded-full shadow text-xs font-mono font-bold text-white" id="timerSyncBadge">⏱️ WAITING</div>
+            </div>
+            <div class="p-6 md:p-8">
+                <div class="flex flex-col lg:flex-row gap-6">
+                    <!-- Current Player Card -->
+                    <div class="flex-1 bg-gradient-to-br from-gray-50 to-white rounded-2xl border-2 border-orange-300 p-5 shadow-md">
+                        <div class="text-orange-600 text-xs font-bold mb-2"><i class="fas fa-microphone-alt"></i> ON THE BLOCK</div>
+                        <div class="flex items-center gap-5 flex-wrap">
+                            <div class="w-20 h-20 rounded-full bg-gradient-to-br from-[#F26522] to-[#000000] flex items-center justify-center text-white shadow-lg">
+                                <i class="fas fa-user-astronaut text-3xl"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-3xl font-black text-gray-800" id="livePlayerName">—</h3>
+                                <div class="flex gap-2 mt-1">
+                                    <span class="bg-orange-100 text-orange-800 text-xs px-2 py-0.5 rounded-full font-semibold" id="livePlayerRole">Role</span>
+                                    <span class="bg-gray-100 text-gray-800 text-xs px-2 py-0.5 rounded-full" id="livePlayerCountry">Country</span>
+                                </div>
+                                <p class="text-gray-500 text-sm mt-1"><i class="fas fa-tag"></i> Base: <span id="liveBasePrice" class="font-mono font-bold">₹0 Cr</span></p>
+                            </div>
+                        </div>
+                        <div class="mt-5 grid grid-cols-2 gap-3">
+                            <div class="bg-gray-100 rounded-xl p-3 text-center">
+                                <p class="text-gray-500 text-[11px] font-medium">CURRENT BID</p>
+                                <p class="text-2xl font-mono font-black text-orange-700" id="liveCurrentBid">₹0 Cr</p>
+                                <p class="text-[10px] text-gray-400" id="highestBidderName">Highest: None</p>
+                            </div>
+                            <div class="bg-gray-100 rounded-xl p-3 text-center">
+                                <p class="text-gray-500 text-[11px] font-medium">AUCTION TIMER</p>
+                                <p class="text-3xl font-mono font-black text-gray-700 pulse-timer" id="liveTimer">00:00</p>
+                            </div>
+                        </div>
+                        <!-- BID CONTROLS (direct bid buttons with increment) -->
+                        <div class="mt-5 space-y-3">
+                            <div class="grid grid-cols-3 gap-2">
+                                <button id="bidPlus25" class="bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 rounded-xl transition-all bid-btn shadow"><i class="fas fa-plus-circle"></i> +0.25 Cr</button>
+                                <button id="bidPlus50" class="bg-orange-600 hover:bg-orange-700 text-white font-bold py-2 rounded-xl transition-all bid-btn shadow"><i class="fas fa-plus-circle"></i> +0.5 Cr</button>
+                                <button id="bidPlus100" class="bg-black hover:bg-gray-800 text-white font-bold py-2 rounded-xl transition-all bid-btn shadow"><i class="fas fa-chart-line"></i> +1 Cr</button>
+                            </div>
+                            <button id="confirmWinBtn" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl transition-all shadow-md flex items-center justify-center gap-2"><i class="fas fa-gavel"></i> WIN BID & ADD TO SQUAD</button>
+                            <button id="skipPlayerBtn" class="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium py-2 rounded-xl transition-all"><i class="fas fa-forward"></i> Skip Player (Auctioneer Only)</button>
+                        </div>
+                    </div>
+
+                    <!-- Auction Queue Preview + Bid History -->
+                    <div class="lg:w-80 space-y-4">
+                        <div class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+                            <p class="font-bold text-gray-700 text-sm flex items-center gap-2"><i class="fas fa-clock text-orange-500"></i> NEXT IN QUEUE</p>
+                            <div id="nextPlayerPreview" class="mt-2 p-2 bg-gray-50 rounded-lg text-center text-gray-500 text-sm">Loading queue...</div>
+                            <div class="mt-3">
+                                <p class="text-xs font-semibold text-gray-500">Upcoming players</p>
+                                <div id="queueShortList" class="mt-1 max-h-28 overflow-y-auto text-xs space-y-1 scroll-custom"></div>
+                            </div>
+                        </div>
+                        <div class="bg-orange-50 rounded-xl p-4 border border-orange-200">
+                            <p class="font-bold text-gray-700 text-sm flex items-center gap-2"><i class="fas fa-history text-orange-600"></i> RECENT BIDS (Global)</p>
+                            <div id="bidHistoryList" class="mt-2 max-h-40 overflow-y-auto space-y-1 text-xs scroll-custom">
+                                <div class="text-gray-400 text-center py-2">Waiting for bids...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TWO COLUMN: UNSOLD POOL + SRH SQUAD -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-7">
+            <!-- Auction Pool (Unsold players from master) -->
+            <div class="bg-white rounded-2xl shadow-md border border-gray-200 overflow-hidden">
+                <div class="bg-gray-50 px-5 py-3 border-b border-gray-200 flex justify-between">
+                    <h3 class="font-bold text-gray-700"><i class="fas fa-database text-orange-500 mr-2"></i> AUCTION POOL · UNSOLD</h3>
+                    <span class="bg-orange-100 text-orange-700 text-xs px-2 py-1 rounded-full" id="poolCount">0 players</span>
+                </div>
+                <div id="unsoldPlayersContainer" class="p-3 max-h-[440px] overflow-y-auto space-y-2 bg-gray-50/40 scroll-custom">
+                    <div class="text-center py-8 text-gray-400"><i class="fas fa-spinner fa-pulse"></i> Loading players...</div>
+                </div>
+            </div>
+
+            <!-- SRH SQUAD (Purchased) -->
+            <div class="bg-white rounded-2xl shadow-md border border-orange-200 overflow-hidden">
+                <div class="team-gradient-bg px-5 py-3 flex justify-between items-center">
+                    <h3 class="font-bold text-white"><i class="fas fa-trophy mr-2"></i> SUNRISERS HYDERABAD · SQUAD</h3>
+                    <span class="bg-white text-orange-700 text-xs font-bold px-2 py-1 rounded-full" id="squadSizeBadge">0/18</span>
+                </div>
+                <div id="srhSquadContainer" class="p-3 max-h-[440px] overflow-y-auto space-y-2 bg-gradient-to-b from-orange-50/20 to-white scroll-custom">
+                    <div class="text-center py-12 text-gray-400"><i class="fas fa-hand-peace text-3xl mb-2"></i><p>No players yet. Win bids!</p></div>
+                </div>
+                <div class="border-t border-gray-100 p-3 flex justify-between bg-gray-50 text-xs">
+                    <span>Total spent: <strong id="totalSpentStat">₹0 Cr</strong></span>
+                    <button id="fullResetBtn" class="text-red-500 hover:text-red-700 transition-all"><i class="fas fa-sync-alt"></i> Reset Auction</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="toastRoot" class="fixed bottom-5 left-1/2 transform -translate-x-1/2 z-50 pointer-events-none"></div>
+
+    <script>
+        // ---------- FIREBASE CONFIG (same as auctioneer) ----------
+        const firebaseConfig = {
+            apiKey: "AIzaSyB2QFOj9pHPdw4QRe4rwSzUvdaXPc7IPI8",
+            authDomain: "ipl-auction-4f969.firebaseapp.com",
+            databaseURL: "https://ipl-auction-4f969-default-rtdb.firebaseio.com",
+            projectId: "ipl-auction-4f969",
+            storageBucket: "ipl-auction-4f969.firebasestorage.app",
+            messagingSenderId: "328599072004",
+            appId: "1:328599072004:web:e60fd71ca57988bd86f451"
+        };
+        
+        const TEAM_ID = "srh";
+        const MAX_SQUAD = 18;
+        const TOTAL_BUDGET_CRORES = 18.0;
+        
+        // MASTER PLAYER LIST (18 unique players - Sunrisers Hyderabad)
+        const MASTER_PLAYERS = [
+            { id: 1, name: "Pat Cummins", role: "Captain/Fast Bowler", basePrice: 3.5, icon: "fa-crown", country: "Australia", specialty: "Leader & Pace Ace" },
+            { id: 2, name: "Travis Head", role: "Opening Batter", basePrice: 2.5, icon: "fa-bolt", country: "Australia", specialty: "Explosive Left-hander" },
+            { id: 3, name: "Abhishek Sharma", role: "All-rounder", basePrice: 1.8, icon: "fa-star", country: "India", specialty: "Left-arm Spin & Power" },
+            { id: 4, name: "Heinrich Klaasen", role: "WK/Batter", basePrice: 2.5, icon: "fa-glove", country: "South Africa", specialty: "Finisher" },
+            { id: 5, name: "Nitish Kumar Reddy", role: "All-rounder", basePrice: 1.2, icon: "fa-futbol", country: "India", specialty: "Promising Talent" },
+            { id: 6, name: "Bhuvneshwar Kumar", role: "Medium Pacer", basePrice: 2.0, icon: "fa-wind", country: "India", specialty: "Swing King" },
+            { id: 7, name: "Mayank Agarwal", role: "Opening Batter", basePrice: 1.5, icon: "fa-running", country: "India", specialty: "Aggressive Opener" },
+            { id: 8, name: "Shahbaz Ahmed", role: "Spin AR", basePrice: 0.8, icon: "fa-leaf", country: "India", specialty: "Left-arm Spin" },
+            { id: 9, name: "Jaydev Unadkat", role: "Left-arm Pacer", basePrice: 1.0, icon: "fa-wind", country: "India", specialty: "Variations Expert" },
+            { id: 10, name: "Washington Sundar", role: "Spin AR", basePrice: 1.2, icon: "fa-magic", country: "India", specialty: "Powerplay Bowler" },
+            { id: 11, name: "T Natarajan", role: "Left-arm Pacer", basePrice: 1.2, icon: "fa-bolt", country: "India", specialty: "Yorker Specialist" },
+            { id: 12, name: "Umran Malik", role: "Fast Bowler", basePrice: 1.0, icon: "fa-bolt", country: "India", specialty: "Raw Pace" },
+            { id: 13, name: "Aiden Markram", role: "Top-order", basePrice: 2.0, icon: "fa-star", country: "South Africa", specialty: "Elegant Strokeplay" },
+            { id: 14, name: "Marco Jansen", role: "All-rounder", basePrice: 1.5, icon: "fa-bolt", country: "South Africa", specialty: "Tall Left-arm Pacer" },
+            { id: 15, name: "Glenn Phillips", role: "WK/Batter", basePrice: 1.2, icon: "fa-glove", country: "New Zealand", specialty: "Explosive Hitter" },
+            { id: 16, name: "Fazalhaq Farooqi", role: "Left-arm Pacer", basePrice: 1.0, icon: "fa-wind", country: "Afghanistan", specialty: "Swing Bowler" },
+            { id: 17, name: "Rahul Tripathi", role: "Middle-order", basePrice: 1.2, icon: "fa-running", country: "India", specialty: "Attacking Player" },
+            { id: 18, name: "Mayank Markande", role: "Leg Spinner", basePrice: 0.8, icon: "fa-magic", country: "India", specialty: "Wicket-taking Spinner" }
+        ];
+        
+        // App state
+        let squad = [];
+        let unsoldPlayers = [...MASTER_PLAYERS];
+        let currentBudget = TOTAL_BUDGET_CRORES;
+        
+        // Auction live state
+        let activeAuctionPlayer = null;
+        let activeCurrentBid = 0;
+        let activeTimer = 30;
+        let auctionStatus = "inactive";
+        let globalHighestBidder = null;
+        
+        let database = null;
+        let currentAuctionRef = null;
+        let teamsRef = null;
+        let bidsRef = null;
+        
+        // Helper: Show toast
+        function showToast(msg, isError = false, isSuccess = false) {
+            const container = document.getElementById('toastRoot');
+            const toast = document.createElement('div');
+            const bg = isError ? 'bg-red-500' : (isSuccess ? 'bg-green-600' : 'bg-orange-600');
+            toast.className = `${bg} text-white px-5 py-3 rounded-xl shadow-2xl flex items-center gap-2 text-sm font-semibold toast-message mb-2 max-w-sm`;
+            toast.innerHTML = `<i class="fas ${isError ? 'fa-times-circle' : (isSuccess ? 'fa-check-circle' : 'fa-info-circle')}"></i> ${msg}`;
+            container.appendChild(toast);
+            setTimeout(() => toast?.remove(), 2800);
+        }
+        
+        // Update UI based on budget/squad
+        function updateStatsUI() {
+            const spent = TOTAL_BUDGET_CRORES - currentBudget;
+            document.getElementById('budgetDisplay').innerHTML = `₹${currentBudget.toFixed(2)} Cr`;
+            document.getElementById('squadCountDisplay').innerHTML = `${squad.length}/${MAX_SQUAD}`;
+            document.getElementById('squadSizeBadge').innerHTML = `${squad.length}/${MAX_SQUAD}`;
+            document.getElementById('totalSpentStat').innerHTML = `₹${spent.toFixed(2)} Cr`;
+            document.getElementById('poolCount').innerHTML = `${unsoldPlayers.length} players`;
+        }
+        
+        // Render unsold pool
+        function renderUnsoldPool() {
+            const container = document.getElementById('unsoldPlayersContainer');
+            if (unsoldPlayers.length === 0) {
+                container.innerHTML = `<div class="text-center py-8 text-gray-500"><i class="fas fa-check-circle text-green-500 text-3xl"></i><p class="mt-2 font-medium">Auction Complete! All sold.</p></div>`;
+                return;
+            }
+            container.innerHTML = unsoldPlayers.map(p => `
+                <div class="player-card bg-white rounded-xl p-3 flex justify-between items-center border border-gray-100 shadow-sm">
+                    <div><span class="font-bold text-gray-800">${p.name}</span><span class="text-xs text-gray-500 ml-2">${p.role}</span><div class="text-orange-600 text-xs font-semibold">₹${p.basePrice} Cr</div></div>
+                    <span class="text-gray-400 text-xs">${p.country}</span>
+                </div>
+            `).join('');
+        }
+        
+        // Render SRH Squad with remove option
+        function renderSquad() {
+            const container = document.getElementById('srhSquadContainer');
+            if (squad.length === 0) {
+                container.innerHTML = `<div class="text-center py-12 text-gray-400"><i class="fas fa-users-slash text-4xl mb-2"></i><p>No players in squad. Win auction!</p></div>`;
+                return;
+            }
+            container.innerHTML = squad.map(p => `
+                <div class="bg-gradient-to-r from-orange-50 to-gray-50 rounded-xl p-3 flex justify-between items-center border-l-4 border-orange-500 shadow-sm">
+                    <div class="flex items-center gap-3"><div class="w-10 h-10 rounded-full bg-gradient-to-br from-[#F26522] to-[#000000] flex items-center justify-center text-white"><i class="fas ${p.icon}"></i></div><div><p class="font-bold text-gray-800">${p.name}</p><p class="text-xs text-gray-500">${p.role} • ₹${p.pricePurchased.toFixed(2)} Cr</p></div></div>
+                    <button class="removeSquadBtn text-red-500 hover:text-red-700 bg-white px-2 py-1 rounded-lg border border-red-200 text-xs" data-id="${p.id}"><i class="fas fa-trash"></i> Release</button>
+                </div>
+            `).join('');
+            document.querySelectorAll('.removeSquadBtn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const id = parseInt(btn.dataset.id);
+                    const playerObj = squad.find(p => p.id === id);
+                    if (playerObj) {
+                        squad = squad.filter(p => p.id !== id);
+                        currentBudget += playerObj.pricePurchased;
+                        if (!unsoldPlayers.some(p => p.id === id)) {
+                            unsoldPlayers.push({ ...playerObj, basePrice: playerObj.pricePurchased });
+                            unsoldPlayers.sort((a,b)=>a.id-b.id);
+                        }
+                        updateStatsUI();
+                        renderUnsoldPool();
+                        renderSquad();
+                        syncTeamToFirebase();
+                        showToast(`${playerObj.name} released & back to auction pool`, false);
+                    }
+                });
+            });
+        }
+        
+        // sync team to firebase
+        function syncTeamToFirebase() {
+            if (database && teamsRef) {
+                teamsRef.child(TEAM_ID).update({
+                    budget: currentBudget * 10000000,
+                    playersPurchased: squad.map(p => ({ id: p.id, name: p.name, price: p.pricePurchased, role: p.role, country: p.country, icon: p.icon }))
+                }).catch(err => console.warn(err));
+            }
+        }
+        
+        // Win current auction player
+        async function winCurrentPlayer() {
+            if (!activeAuctionPlayer) {
+                showToast("No active player on auction stage", true);
+                return;
+            }
+            if (auctionStatus !== 'active') {
+                showToast("Auction is not active. Wait for auctioneer to start.", true);
+                return;
+            }
+            if (squad.length >= MAX_SQUAD) {
+                showToast(`Squad full! Max ${MAX_SQUAD} players. Release someone first.`, true);
+                return;
+            }
+            const bidValue = activeCurrentBid;
+            if (bidValue <= 0) {
+                showToast(`No bid placed. Place a bid first.`, true);
+                return;
+            }
+            if (currentBudget < bidValue) {
+                showToast(`Insufficient budget! Need ₹${bidValue.toFixed(2)} Cr`, true);
+                return;
+            }
+            const playerToWin = { ...activeAuctionPlayer, pricePurchased: bidValue };
+            squad.push(playerToWin);
+            currentBudget -= bidValue;
+            unsoldPlayers = unsoldPlayers.filter(p => p.id !== activeAuctionPlayer.id);
+            updateStatsUI();
+            renderUnsoldPool();
+            renderSquad();
+            syncTeamToFirebase();
+            showToast(`🎉 SOLD! ${activeAuctionPlayer.name} added to SRH squad for ₹${bidValue.toFixed(2)} Cr`, false, true);
+            if (currentAuctionRef) {
+                currentAuctionRef.update({ status: 'inactive', timerRemaining: 0 }).catch(()=>{});
+            }
+        }
+        
+        // Place bid increment
+        async function placeBidIncrement(incValue) {
+            if (!activeAuctionPlayer) {
+                showToast("No active player available", true);
+                return;
+            }
+            if (auctionStatus !== 'active') {
+                showToast("Auction not active", true);
+                return;
+            }
+            const newBidAmount = activeCurrentBid + incValue;
+            if (newBidAmount > currentBudget) {
+                showToast(`Bid exceeds your available budget (₹${currentBudget.toFixed(2)} Cr)`, true);
+                return;
+            }
+            if (newBidAmount > 25.0) {
+                showToast("Max bid cap 25 Cr", true);
+                return;
+            }
+            if (currentAuctionRef) {
+                await currentAuctionRef.update({
+                    currentBid: newBidAmount * 100000,
+                    highestBidder: TEAM_ID,
+                    highestBidderName: "Sunrisers Hyderabad"
+                });
+                if (bidsRef) {
+                    bidsRef.push({
+                        teamId: TEAM_ID,
+                        teamName: "Sunrisers Hyderabad",
+                        amount: newBidAmount * 100000,
+                        player: activeAuctionPlayer.name,
+                        timestamp: Date.now()
+                    });
+                }
+                showToast(`SRH raised bid to ₹${newBidAmount.toFixed(2)} Cr`, false);
+            } else {
+                showToast("Firebase sync error", true);
+            }
+        }
+        
+        // Sync auction data from auctioneer
+        function bindAuctionUpdates() {
+            if (!currentAuctionRef) return;
+            currentAuctionRef.on('value', (snap) => {
+                const data = snap.val();
+                if (data) {
+                    auctionStatus = data.status || 'inactive';
+                    const activePlayerName = data.activePlayer || '—';
+                    const timerRem = data.timerRemaining ?? 30;
+                    const currentBidVal = (data.currentBid || 0) / 100000;
+                    const highestTeam = data.highestBidderName || 'None';
+                    
+                    activeCurrentBid = currentBidVal;
+                    activeTimer = timerRem;
+                    globalHighestBidder = highestTeam;
+                    
+                    let foundPlayer = unsoldPlayers.find(p => p.name === activePlayerName);
+                    if (!foundPlayer && activePlayerName !== '—' && activePlayerName !== 'Ready for Auction') {
+                        foundPlayer = MASTER_PLAYERS.find(p => p.name === activePlayerName);
+                    }
+                    activeAuctionPlayer = foundPlayer || null;
+                    
+                    document.getElementById('livePlayerName').innerText = activePlayerName === '—' ? 'Awaiting Player' : activePlayerName;
+                    if (activeAuctionPlayer) {
+                        document.getElementById('livePlayerRole').innerText = activeAuctionPlayer.role || 'Player';
+                        document.getElementById('livePlayerCountry').innerText = activeAuctionPlayer.country || 'International';
+                        document.getElementById('liveBasePrice').innerHTML = `₹${(activeAuctionPlayer.basePrice || 0).toFixed(2)} Cr`;
+                    } else {
+                        document.getElementById('livePlayerRole').innerText = '—';
+                        document.getElementById('livePlayerCountry').innerText = '—';
+                        document.getElementById('liveBasePrice').innerHTML = `₹0 Cr`;
+                    }
+                    document.getElementById('liveCurrentBid').innerHTML = `₹${currentBidVal.toFixed(2)} Cr`;
+                    document.getElementById('highestBidderName').innerHTML = `Highest: ${highestTeam}`;
+                    const mins = Math.floor(Math.max(0, timerRem) / 60);
+                    const secs = Math.floor(Math.max(0, timerRem) % 60);
+                    document.getElementById('liveTimer').innerHTML = `${mins.toString().padStart(2,'0')}:${secs.toString().padStart(2,'0')}`;
+                    document.getElementById('timerSyncBadge').innerHTML = auctionStatus === 'active' ? '🔴 LIVE TIMER' : '⏸️ PAUSED';
+                }
+            });
+        }
+        
+        function bindBidHistory() {
+            if (!bidsRef) return;
+            bidsRef.limitToLast(8).on('value', (snap) => {
+                const bidsData = snap.val();
+                const container = document.getElementById('bidHistoryList');
+                if (!bidsData) {
+                    container.innerHTML = '<div class="text-gray-400 text-center py-2">No bids yet</div>';
+                    return;
+                }
+                const bidsArr = Object.values(bidsData).sort((a,b)=>b.timestamp - a.timestamp).slice(0,6);
+                if (bidsArr.length === 0) {
+                    container.innerHTML = '<div class="text-gray-400 text-center py-2">No recent bids</div>';
+                    return;
+                }
+                container.innerHTML = bidsArr.map(b => `
+                    <div class="bid-history-badge rounded-lg px-2 py-1 flex justify-between items-center border border-orange-200">
+                        <span class="font-semibold text-xs">${b.teamName || b.teamId}</span>
+                        <span class="text-green-700 font-bold text-xs">₹${(b.amount/100000).toFixed(1)} L</span>
+                        <span class="text-gray-500 text-[10px]">${b.player}</span>
+                    </div>
+                `).join('');
+            });
+        }
+        
+        // Load team state from Firebase
+        function loadTeamFromFirebase() {
+            if (!teamsRef) return;
+            teamsRef.child(TEAM_ID).on('value', (snap) => {
+                const teamData = snap.val();
+                if (teamData && teamData.playersPurchased && Array.isArray(teamData.playersPurchased)) {
+                    squad = teamData.playersPurchased.map(p => ({ ...p, pricePurchased: p.price }));
+                    currentBudget = (teamData.budget || TOTAL_BUDGET_CRORES * 10000000) / 10000000;
+                    const purchasedIds = squad.map(p => p.id);
+                    unsoldPlayers = MASTER_PLAYERS.filter(p => !purchasedIds.includes(p.id));
+                    updateStatsUI();
+                    renderUnsoldPool();
+                    renderSquad();
+                } else {
+                    squad = [];
+                    currentBudget = TOTAL_BUDGET_CRORES;
+                    unsoldPlayers = [...MASTER_PLAYERS];
+                    updateStatsUI();
+                    renderUnsoldPool();
+                    renderSquad();
+                    syncTeamToFirebase();
+                }
+            });
+        }
+        
+        // Build queue preview
+        function updateQueuePreview() {
+            const queuePreviewDiv = document.getElementById('queueShortList');
+            const nextPreviewSpan = document.getElementById('nextPlayerPreview');
+            if (unsoldPlayers.length > 0) {
+                nextPreviewSpan.innerHTML = `<span class="font-bold text-orange-700">${unsoldPlayers[0].name}</span> (₹${unsoldPlayers[0].basePrice} Cr)`;
+                const upcoming = unsoldPlayers.slice(1, 5);
+                if (upcoming.length) queuePreviewDiv.innerHTML = upcoming.map(p => `<div class="flex justify-between text-gray-600"><span>${p.name}</span><span class="text-orange-600">₹${p.basePrice} Cr</span></div>`).join('');
+                else queuePreviewDiv.innerHTML = '<div class="text-gray-400">No more</div>';
+            } else {
+                nextPreviewSpan.innerHTML = 'Auction complete';
+                queuePreviewDiv.innerHTML = '';
+            }
+        }
+        
+        // Global reset
+        function fullReset() {
+            if (confirm("⚠️ RESET entire SRH auction? Squad cleared, budget restored.")) {
+                squad = [];
+                currentBudget = TOTAL_BUDGET_CRORES;
+                unsoldPlayers = [...MASTER_PLAYERS];
+                updateStatsUI();
+                renderUnsoldPool();
+                renderSquad();
+                syncTeamToFirebase();
+                showToast("Full reset complete. All players back in pool.", false);
+            }
+        }
+        
+        // Init firebase
+        function initFirebase() {
+            try {
+                const app = firebase.initializeApp(firebaseConfig);
+                database = firebase.database();
+                currentAuctionRef = database.ref('current_auction');
+                teamsRef = database.ref('teams');
+                bidsRef = database.ref('bids');
+                bindAuctionUpdates();
+                bindBidHistory();
+                loadTeamFromFirebase();
+                setInterval(updateQueuePreview, 2000);
+                updateQueuePreview();
+                document.getElementById('liveIcon').classList.add('animate-spin');
+                document.getElementById('syncStatusText').innerHTML = 'Live · Connected';
+                showToast("🔥 Connected to Auction Master", false);
+            } catch(e) {
+                console.error(e);
+                showToast("Firebase connection error", true);
+            }
+        }
+        
+        // Event listeners
+        document.getElementById('bidPlus25').addEventListener('click', () => placeBidIncrement(0.25));
+        document.getElementById('bidPlus50').addEventListener('click', () => placeBidIncrement(0.5));
+        document.getElementById('bidPlus100').addEventListener('click', () => placeBidIncrement(1.0));
+        document.getElementById('confirmWinBtn').addEventListener('click', winCurrentPlayer);
+        document.getElementById('skipPlayerBtn').addEventListener('click', () => showToast("Skip only available via Auctioneer panel", true));
+        document.getElementById('fullResetBtn').addEventListener('click', fullReset);
+        
+        initFirebase();
+    </script>
+</body>
+</html>
