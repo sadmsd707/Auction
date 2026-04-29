@@ -3,588 +3,870 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>Auction Master | IPL 2026 - Manual Next (No Auto Advance)</title>
+    <title>Auction Master | IPL 2026 Auction Controller - 249 Players</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-        body { font-family: 'Inter', sans-serif; background: linear-gradient(135deg, #f0f9ff 0%, #ffffff 50%, #faf5ff 100%); }
-        .team-card { transition: all 0.3s ease; cursor: pointer; }
-        .team-card:hover { transform: translateY(-4px); box-shadow: 0 12px 20px -10px rgba(0,0,0,0.15); }
-        .toast-notify { position: fixed; bottom: 24px; right: 24px; background: #1e293b; color: white; padding: 12px 20px; border-radius: 12px; z-index: 50; transition: all 0.3s; }
-        .gradient-text { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .timer-critical { color: #ef4444; animation: pulse 1s infinite; }
-        @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.7;} }
-        .current-player-role { font-size: 0.7rem; background: #f3e8ff; display: inline-block; padding: 2px 8px; border-radius: 20px; color: #7c3aed; }
-        .upcoming-card, .unsold-card { transition: all 0.2s; }
+        body { font-family: 'Inter', sans-serif; }
+        .timer-font { font-family: 'Inter', monospace; font-weight: 700; }
+        .team-card {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .team-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 20px -10px rgba(0, 0, 0, 0.15);
+        }
+        .toast-notify {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: #1e293b;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 12px;
+            font-weight: 500;
+            z-index: 50;
+            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1);
+            transition: all 0.3s;
+        }
+        .gradient-text {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .bid-history-item {
+            font-size: 12px;
+            padding: 6px 8px;
+            border-bottom: 1px solid #f0f0f0;
+            transition: all 0.2s;
+        }
+        .bid-history-item:hover {
+            background-color: #f9f9f9;
+        }
+        .player-queue-scroll {
+            max-height: 280px;
+            overflow-y: auto;
+            scrollbar-width: thin;
+        }
+        .player-queue-scroll::-webkit-scrollbar {
+            width: 5px;
+        }
+        .player-queue-scroll::-webkit-scrollbar-track {
+            background: #e2e8f0;
+            border-radius: 10px;
+        }
+        .player-queue-scroll::-webkit-scrollbar-thumb {
+            background: #c084fc;
+            border-radius: 10px;
+        }
+        .current-player-role {
+            font-size: 0.7rem;
+            font-weight: 500;
+            background: #f3e8ff;
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 20px;
+            margin-top: 4px;
+            color: #7c3aed;
+        }
+        .upcoming-card {
+            transition: all 0.2s ease;
+            background: white;
+        }
+        .upcoming-card:hover {
+            background: #faf5ff;
+            transform: translateX(2px);
+        }
+        .unsold-card {
+            transition: all 0.2s ease;
+            background: #fef2f2;
+            border-left: 3px solid #ef4444;
+        }
+        .unsold-card:hover {
+            background: #fee2e2;
+            transform: translateX(2px);
+        }
+        .visible-players {
+            max-height: 320px;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+        .timer-critical {
+            color: #ef4444;
+            animation: pulse 1s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        .bid-section {
+            background: linear-gradient(135deg, #fef3c7, #fde68a);
+        }
     </style>
 </head>
-<body>
+<body class="bg-gradient-to-br from-blue-50 via-white to-purple-50">
 
-<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-    <!-- Header -->
-    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-        <div>
-            <h1 class="text-4xl md:text-5xl font-black"><span class="gradient-text">🏏 IPL Auction 2026</span></h1>
-            <p class="text-gray-600 text-sm mt-2">Master Controller · Manual Bidding · Manual Next Player</p>
-        </div>
-        <div class="bg-white px-4 py-2 rounded-xl shadow-md flex gap-2 border border-gray-200">
-            <div class="w-3 h-3 bg-yellow-500 rounded-full animate-pulse" id="statusDot"></div>
-            <span class="text-gray-700 font-mono text-sm" id="connectionStatus">Connecting...</span>
-        </div>
-    </div>
-
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <!-- Left Panel -->
-        <div class="lg:col-span-1 space-y-6">
-            <div class="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
-                <div class="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-4">
-                    <h2 class="text-white font-bold text-xl"><i class="fas fa-gavel"></i> Auction Console</h2>
-                </div>
-                <div class="p-6 space-y-6">
-                    <div class="bg-gradient-to-br from-gray-50 to-blue-50 rounded-xl p-4 border border-indigo-100">
-                        <div class="flex justify-between"><span class="text-gray-600">Status</span><span id="auctionStatusBadge" class="px-3 py-1 rounded-full text-xs font-bold bg-gray-200">Inactive</span></div>
-                        <div class="mt-3"><div class="text-2xl font-bold text-indigo-700" id="activePlayerDisplay">—</div><div id="activePlayerRoleDisplay" class="current-player-role text-xs mt-1">—</div></div>
-                        <div class="mt-3 pt-2 border-t flex justify-between"><span class="text-gray-600">Timer:</span><span id="timerValue" class="font-bold text-3xl text-indigo-600">00:00</span></div>
-                        <div class="mt-2 flex justify-between"><span class="text-gray-600">Winning Bid:</span><span id="currentBid" class="text-lg font-bold text-green-600">₹0</span></div>
-                        <div><span class="text-xs text-gray-500">Leader: </span><span class="text-xs font-semibold text-purple-600" id="winningTeamName">None</span></div>
-                    </div>
-
-                    <div class="grid gap-3">
-                        <button id="startAuctionBtn" class="bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 px-4 rounded-xl shadow-md"><i class="fas fa-play"></i> START AUCTION</button>
-                        <button id="nextPlayerBtn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-xl shadow-md"><i class="fas fa-forward"></i> NEXT PLAYER (MANUAL)</button>
-                        <button id="resetTimerBtn" class="bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 px-4 rounded-xl shadow-md"><i class="fas fa-clock"></i> RESET TIMER (30s)</button>
-                    </div>
-
-                    <!-- Upcoming -->
-                    <div class="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-xl p-4 border border-blue-200">
-                        <div class="flex justify-between"><h3 class="font-bold">⏩ Upcoming Players</h3><span class="bg-blue-200 text-blue-800 text-xs px-2 py-0.5 rounded-full" id="remainingCount">0</span></div>
-                        <div id="upcomingPlayersContainer" class="max-h-64 overflow-y-auto space-y-2 mt-2"></div>
-                    </div>
-
-                    <!-- Unsold -->
-                    <div class="bg-gradient-to-r from-red-50 to-orange-50 rounded-xl p-4 border border-red-200">
-                        <div class="flex justify-between"><h3 class="font-bold">❌ Unsold Players</h3><span class="bg-red-200 text-red-800 text-xs px-2 py-0.5 rounded-full" id="unsoldCount">0</span></div>
-                        <div id="unsoldPlayersContainer" class="max-h-56 overflow-y-auto space-y-1 mt-2"></div>
-                    </div>
-
-                    <!-- Bid History -->
-                    <div class="bg-gray-50 rounded-xl p-3 border">
-                        <p class="text-xs font-semibold"><i class="fas fa-history"></i> Recent Bids</p>
-                        <div id="bidHistory" class="max-h-40 overflow-y-auto space-y-1 text-xs"></div>
-                    </div>
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+            <div>
+                <h1 class="text-4xl md:text-5xl font-black">
+                    <span class="gradient-text">🏏 IPL Auction 2026</span>
+                </h1>
+                <p class="text-gray-600 text-sm mt-2">Complete Auction Pool · 249 Players</p>
+                <p class="text-xs text-gray-400 mt-1">
+                    <i class="fas fa-users"></i> Total Players: 249 | 
+                    <i class="fas fa-gavel"></i> Manual Bidding | 
+                    <i class="fas fa-clock"></i> Timer: 30 seconds
+                </p>
+            </div>
+            <div class="flex gap-2">
+                <div class="bg-white px-4 py-2 rounded-xl shadow-md flex items-center gap-2 border border-gray-200">
+                    <div class="w-3 h-3 bg-yellow-500 rounded-full animate-pulse" id="statusDot"></div>
+                    <span class="text-gray-700 font-mono text-sm" id="connectionStatus">Connecting...</span>
                 </div>
             </div>
         </div>
 
-        <!-- Teams -->
-        <div class="lg:col-span-2">
-            <div class="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
-                <div class="bg-gradient-to-r from-pink-500 to-rose-500 px-6 py-4">
-                    <h2 class="text-white font-bold text-xl"><i class="fas fa-trophy"></i> IPL Teams · Live Budgets</h2>
-                    <p class="text-pink-100 text-xs">Manual bidding only | Master clicks NEXT after each player</p>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div class="lg:col-span-1 space-y-6">
+                <div class="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
+                    <div class="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-4">
+                        <h2 class="text-white font-bold text-xl flex items-center gap-2">
+                            <i class="fas fa-gavel"></i> Auction Console
+                        </h2>
+                    </div>
+                    <div class="p-6 space-y-6">
+                        <div class="bg-gradient-to-br from-gray-50 to-blue-50 rounded-xl p-4 border border-indigo-100">
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-600 font-medium">⏱️ Auction Status</span>
+                                <span id="auctionStatusBadge" class="px-3 py-1 rounded-full text-xs font-bold bg-gray-200 text-gray-700">Inactive</span>
+                            </div>
+                            <div class="mt-3">
+                                <div class="text-2xl font-bold text-indigo-700" id="activePlayerDisplay">—</div>
+                                <div id="activePlayerRoleDisplay" class="current-player-role text-xs mt-1 inline-block">—</div>
+                                <div class="text-xs text-gray-500 mt-1">Current Player on Auction</div>
+                            </div>
+                            <div class="mt-3 pt-2 border-t border-gray-200 flex justify-between items-center">
+                                <span class="text-gray-600 text-sm">Timer:</span>
+                                <span id="timerValue" class="timer-font font-bold text-3xl text-indigo-600">00:00</span>
+                            </div>
+                            <div class="mt-2 pt-2 border-t border-gray-200 flex justify-between items-center">
+                                <span class="text-gray-600 text-sm">💰 Current Bid:</span>
+                                <span id="currentBid" class="text-lg font-bold text-green-600">₹0</span>
+                            </div>
+                            <div class="mt-1" id="highestBidderDisplay">
+                                <span class="text-xs text-gray-500">Highest Bidder: </span>
+                                <span class="text-xs font-semibold text-purple-600" id="winningTeamName">None</span>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 gap-3">
+                            <button id="startAuctionBtn" class="bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 px-4 rounded-xl transition-all flex items-center justify-center gap-2 shadow-md">
+                                <i class="fas fa-play"></i> START AUCTION
+                            </button>
+                            <button id="nextPlayerBtn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-xl transition-all flex items-center justify-center gap-2 shadow-md">
+                                <i class="fas fa-forward"></i> NEXT PLAYER
+                            </button>
+                            <button id="resetTimerBtn" class="bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 px-4 rounded-xl transition-all flex items-center justify-center gap-2 shadow-md">
+                                <i class="fas fa-clock"></i> RESET TIMER (30s)
+                            </button>
+                        </div>
+
+                        <!-- BID SECTION -->
+                        <div class="bid-section rounded-xl p-4 border border-amber-300">
+                            <div class="flex items-center gap-2 mb-3">
+                                <i class="fas fa-gavel text-amber-700 text-lg"></i>
+                                <h3 class="font-bold text-gray-800">💰 Place Bid</h3>
+                            </div>
+                            <div class="space-y-3">
+                                <input type="number" id="bidAmount" placeholder="Enter amount in Lakhs (e.g., 50 for ₹50 Lakhs)" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500">
+                                <select id="bidTeam" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500">
+                                    <option value="">Select Team</option>
+                                </select>
+                                <button id="placeBidBtn" class="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 px-4 rounded-lg transition-all flex items-center justify-center gap-2">
+                                    <i class="fas fa-hand-holding-usd"></i> PLACE BID
+                                </button>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-2 text-center">
+                                <i class="fas fa-info-circle"></i> Bid must be higher than current bid
+                            </p>
+                        </div>
+
+                        <!-- UPCOMING PLAYERS SECTION -->
+                        <div class="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-xl p-4 border border-blue-200">
+                            <div class="flex items-center gap-2 mb-3">
+                                <i class="fas fa-forward-step text-blue-700 text-lg"></i>
+                                <h3 class="font-bold text-gray-800">⏩ Upcoming Players</h3>
+                                <span class="bg-blue-200 text-blue-800 text-[10px] font-bold px-2 py-0.5 rounded-full ml-auto">Queue: <span id="remainingCount">0</span></span>
+                            </div>
+                            
+                            <div id="upcomingPlayersContainer" class="visible-players space-y-2" style="max-height: 320px; overflow-y: auto;">
+                                <div class="text-center text-gray-400 py-4">Loading players...</div>
+                            </div>
+                            
+                            <div class="mt-3 pt-2 border-t border-blue-100 text-xs text-gray-500 flex justify-between items-center">
+                                <span><i class="far fa-clock"></i> Next in queue</span>
+                                <span><i class="fas fa-arrow-down"></i> Scroll to see more</span>
+                            </div>
+                        </div>
+
+                        <!-- UNSOLD PLAYERS SECTION -->
+                        <div class="bg-gradient-to-r from-red-50 to-orange-50 rounded-xl p-4 border border-red-200">
+                            <div class="flex items-center gap-2 mb-3">
+                                <i class="fas fa-sad-tear text-red-600 text-lg"></i>
+                                <h3 class="font-bold text-gray-800">❌ Unsold Players</h3>
+                                <span class="bg-red-200 text-red-800 text-[10px] font-bold px-2 py-0.5 rounded-full ml-auto">Count: <span id="unsoldCount">0</span></span>
+                            </div>
+                            
+                            <div id="unsoldPlayersContainer" class="player-queue-scroll space-y-2" style="max-height: 280px; overflow-y: auto;">
+                                <div class="text-center text-gray-400 py-4">No unsold players yet</div>
+                            </div>
+                            <div class="mt-2 text-[10px] text-red-500 text-center">
+                                <i class="fas fa-info-circle"></i> Players with no bids when timer ends go here
+                            </div>
+                        </div>
+
+                        <div class="bg-gray-50 rounded-xl p-3 border border-gray-200">
+                            <p class="text-xs text-gray-600 mb-2 font-semibold">
+                                <i class="fas fa-history"></i> Recent Bids
+                            </p>
+                            <div id="bidHistory" class="max-h-48 overflow-y-auto space-y-1">
+                                <div class="text-xs text-gray-400 text-center py-2">No bids yet</div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div class="p-6">
-                    <div id="teamsGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+            </div>
+
+            <div class="lg:col-span-2">
+                <div class="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
+                    <div class="bg-gradient-to-r from-pink-500 to-rose-500 px-6 py-4">
+                        <h2 class="text-white font-bold text-xl flex items-center gap-2">
+                            <i class="fas fa-trophy"></i> IPL Teams · Live Budgets
+                        </h2>
+                        <p class="text-pink-100 text-xs mt-1">Initial Budget: ₹300 Cr | Click team to select for bidding</p>
+                    </div>
+                    <div class="p-6">
+                        <div id="teamsGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="animate-pulse space-y-3">
+                                <div class="h-24 bg-gray-200 rounded-xl"></div>
+                                <div class="h-24 bg-gray-200 rounded-xl"></div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
-<div id="toastMsg" class="toast-notify opacity-0 pointer-events-none"></div>
 
-<script>
-    const firebaseConfig = {
-        apiKey: "AIzaSyB2QFOj9pHPdw4QRe4rwSzUvdaXPc7IPI8",
-        authDomain: "ipl-auction-4f969.firebaseapp.com",
-        databaseURL: "https://ipl-auction-4f969-default-rtdb.firebaseio.com",
-        projectId: "ipl-auction-4f969",
-        storageBucket: "ipl-auction-4f969.firebasestorage.app",
-        messagingSenderId: "328599072004",
-        appId: "1:328599072004:web:e60fd71ca57988bd86f451"
-    };
+    <div id="toastMsg" class="toast-notify opacity-0 pointer-events-none"></div>
 
-    // -------------------- सर्व 249 प्लेयर्स (तुमची मूळ यादी) --------------------
-    const allPlayers = [
-        { n: "MS Dhoni (WK)", r: "Right-Handed Batsman", basePrice: 200 },
-        { n: "Akeal Hosein", r: "Left-Arm Off Spin Bowler", basePrice: 100 },
-        { n: "Shreyas Gopal", r: "RHB / Right-Arm Leg Spin", basePrice: 75 },
-        { n: "Jamie Overton", r: "RHB / Right-Arm Fast", basePrice: 100 },
-        { n: "Matt Henry", r: "Right-Arm Fast Medium", basePrice: 150 },
-        { n: "Sanju Samson (Wk)", r: "Right-Handed Batsman", basePrice: 200 },
-        { n: "Matt Short", r: "RHB / Right-Arm Off Spin", basePrice: 125 },
-        { n: "Sarfaraz Khan", r: "Right-Handed Batsman", basePrice: 100 },
-        { n: "Khaleel Ahmed", r: "Left-Arm Fast Medium", basePrice: 100 },
-        { n: "Shivam Dube", r: "LHB / Right-Arm Medium", basePrice: 150 },
-        { n: "Ruturaj Gaikwad (C)", r: "Right-Handed Batsman", basePrice: 200 },
-        { n: "Rahul Chahar", r: "Right-Arm Leg Spin", basePrice: 100 },
-        { n: "Spencer Johnson", r: "Left-Arm Fast Bowler", basePrice: 125 },
-        { n: "Mukesh Choudhary", r: "Left-Arm Medium Bowler", basePrice: 75 },
-        { n: "Urvil Patel (Wk)", r: "Right-Handed Batsman", basePrice: 75 },
-        { n: "Aman Hakim Khan", r: "RHB / Right-Arm Medium", basePrice: 50 },
-        { n: "Anshul Kamboj", r: "Right-Arm Medium Bowler", basePrice: 50 },
-        { n: "Noor Ahmad", r: "Left-Arm Leg Spin Bowler", basePrice: 125 },
-        { n: "Dewald Brevis", r: "Right-Handed Batsman", basePrice: 150 },
-        { n: "Gurjapneet Singh", r: "Left-Arm Medium Fast", basePrice: 50 },
-        { n: "Zakary Foulkes", r: "RHB / Right-Arm Medium", basePrice: 75 },
-        { n: "Prashant Veer", r: "LHB / Left-Arm Off Spin", basePrice: 50 },
-        { n: "Ramakrishna Ghosh", r: "Right-Arm Medium Fast", basePrice: 50 },
-        { n: "Ayush Mhatre", r: "Right-Handed Batsman", basePrice: 50 },
-        { n: "Kartik Sharma (WK)", r: "Right-Handed Batsman", basePrice: 50 },
-        { n: "Marcus Stoinis", r: "RHB / Right-Arm Medium", basePrice: 200 },
-        { n: "Yuzvendra Chahal", r: "Right-Arm Leg Spin", basePrice: 200 },
-        { n: "Shashank Singh", r: "Right-Handed Batsman", basePrice: 100 },
-        { n: "Praveen Dubey", r: "Right-Arm Leg Spin", basePrice: 50 },
-        { n: "Lockie Ferguson", r: "Right-Arm Fast Bowler", basePrice: 150 },
-        { n: "Shreyas Iyer (C)", r: "Right-Handed Batsman", basePrice: 200 },
-        { n: "Ben Dwarshuis", r: "Left-Arm Fast Medium", basePrice: 100 },
-        { n: "Vishnu Vinod (WK)", r: "Right-Handed Batsman", basePrice: 75 },
-        { n: "Xavier Bartlett", r: "Right-Arm Fast Medium", basePrice: 100 },
-        { n: "Yash Thakur", r: "Right-Arm Fast Medium", basePrice: 75 },
-        { n: "Azmatullah Omarzai", r: "RHB / Right-Arm Medium Fast", basePrice: 125 },
-        { n: "Vyshak Vijay Kumar", r: "Right-Arm Medium Bowler", basePrice: 75 },
-        { n: "Arshdeep Singh", r: "Left-Arm Medium Fast", basePrice: 180 },
-        { n: "Marco Jansen", r: "RHB / Left-Arm Fast", basePrice: 150 },
-        { n: "Nehal Wadhera", r: "LHB / Right-Arm Leg Spin", basePrice: 75 },
-        { n: "Prabhsimran Singh (Wk)", r: "Right-Handed Batsman", basePrice: 100 },
-        { n: "Harpreet Brar", r: "Left-Arm Off Spin Bowler", basePrice: 75 },
-        { n: "Priyansh Arya", r: "Left-Handed Batsman", basePrice: 50 },
-        { n: "Suryansh Shedge", r: "Right-Handed Batsman", basePrice: 50 },
-        { n: "Cooper Connolly", r: "LHB / Left-Arm Off Spin", basePrice: 75 },
-        { n: "Mitchell Owen", r: "RHB / Right-Arm Medium", basePrice: 75 },
-        { n: "Pyla Avinash", r: "Right-Handed Batsman", basePrice: 50 },
-        { n: "Harnoor Singh", r: "Left-Handed Batsman", basePrice: 50 },
-        { n: "Musheer Khan", r: "RHB / Left-Arm Off Spin", basePrice: 75 },
-        { n: "Vishal Nishad", r: "Right-Arm Leg Spin", basePrice: 50 },
-        { n: "Ishant Sharma", r: "Right-Arm Fast Medium", basePrice: 150 },
-        { n: "Jos Buttler (Wk)", r: "Right-Handed Batsman", basePrice: 200 },
-        { n: "Jason Holder", r: "RHB / Right-Arm Medium Fast", basePrice: 150 },
-        { n: "Jayant Yadav", r: "Right-Arm Off Spin Bowler", basePrice: 75 },
-        { n: "Kagiso Rabada", r: "Right-Arm Fast Bowler", basePrice: 200 },
-        { n: "Rahul Tewatia", r: "LHB / Right-Arm Leg Spin", basePrice: 150 },
-        { n: "Luke Wood", r: "Left-Arm Fast Medium Bowler", basePrice: 100 },
-        { n: "Shahrukh Khan", r: "Right-Handed Batsman", basePrice: 100 },
-        { n: "Glenn Phillips", r: "RHB / Right-Arm Off Spin", basePrice: 150 },
-        { n: "Prasidh Krishna", r: "Right-Arm Fast Medium", basePrice: 150 },
-        { n: "Rashid Khan", r: "Right-Arm Leg Spin", basePrice: 200 },
-        { n: "Mohammed Siraj", r: "Right-Arm Fast Bowler", basePrice: 180 },
-        { n: "Washington Sundar", r: "LHB / Right-Arm Off Spin", basePrice: 150 },
-        { n: "Sai Kishore", r: "Left-Arm Off Spin Bowler", basePrice: 100 },
-        { n: "Shubman Gill (C)", r: "Right-Handed Batsman", basePrice: 200 },
-        { n: "Tom Banton (WK)", r: "Right-Handed Batsman", basePrice: 100 },
-        { n: "Kulwant Khejroliya", r: "Left-Arm Medium Fast", basePrice: 50 },
-        { n: "Anuj Rawat (Wk)", r: "Left-Handed Batsman", basePrice: 75 },
-        { n: "Sai Sudharsan", r: "Left-Handed Batsman", basePrice: 100 },
-        { n: "Manav Suthar", r: "Left-Arm Off Spin Bowler", basePrice: 50 },
-        { n: "Kumar Kushagra (Wk)", r: "Right-Handed Batsman", basePrice: 50 },
-        { n: "Arshad Khan", r: "Left-Arm Medium Bowler", basePrice: 50 },
-        { n: "Nishant Sindhu", r: "LHB / Left-Arm Off Spin", basePrice: 50 },
-        { n: "Gurnoor Brar", r: "Right-Arm Fast Bowler", basePrice: 50 },
-        { n: "Ashok Sharma", r: "Right-Arm Medium Fast", basePrice: 50 },
-        { n: "Mitchell Marsh", r: "RHB / Right-Arm Medium", basePrice: 200 },
-        { n: "Mohammed Shami", r: "Right-Arm Fast Bowler", basePrice: 200 },
-        { n: "Shahbaz Ahmed", r: "LHB / Left-Arm Off Spin", basePrice: 100 },
-        { n: "Anrich Nortje", r: "Right-Arm Fast Bowler", basePrice: 180 },
-        { n: "Nicholas Pooran (Wk)", r: "Left-Handed Batsman", basePrice: 200 },
-        { n: "Aiden Markram", r: "RHB / Right-Arm Off Spin", basePrice: 150 },
-        { n: "Avesh Khan", r: "Right-Arm Fast Medium", basePrice: 150 },
-        { n: "Wanindu Hasaranga", r: "RHB / Right-Arm Leg Spin", basePrice: 150 },
-        { n: "Himmat Singh", r: "Right-Handed Batsman", basePrice: 50 },
-        { n: "Matthew Breetzke", r: "Right-Handed Batsman", basePrice: 75 },
-        { n: "Rishabh Pant (C) (Wk)", r: "Left-Handed Batsman", basePrice: 200 },
-        { n: "Josh Inglis (WK)", r: "Right-Handed Batsman", basePrice: 150 },
-        { n: "M Siddharth", r: "Left-Arm Off Spin Bowler", basePrice: 50 },
-        { n: "Mohsin Khan", r: "Left-Arm Medium Fast", basePrice: 100 },
-        { n: "Ayush Badoni", r: "Right-Handed Batsman", basePrice: 100 },
-        { n: "Arjun Tendulkar", r: "Left-Arm Medium Fast", basePrice: 50 },
-        { n: "Akash Singh", r: "Left-Arm Medium Fast", basePrice: 50 },
-        { n: "Abdul Samad", r: "Right-Handed Batsman", basePrice: 100 },
-        { n: "Arshin Kulkarni", r: "RHB / Right-Arm Medium", basePrice: 50 },
-        { n: "Naman Tiwari", r: "Left-Arm Medium Fast", basePrice: 50 },
-        { n: "Akshat Raghuwanshi", r: "Right-Handed Batsman", basePrice: 50 },
-        { n: "Mayank Yadav", r: "Right-Arm Fast Bowler", basePrice: 100 },
-        { n: "M-Choudhary (WK)", r: "Right-Handed Batsman", basePrice: 50 },
-        { n: "Prince Yadav", r: "Right-Arm Fast Bowler", basePrice: 50 },
-        { n: "Digvesh Rathi", r: "Right-Arm Leg Spin", basePrice: 50 },
-        { n: "David Miller", r: "Left-Handed Batsman", basePrice: 200 },
-        { n: "Mitchell Starc", r: "Left-Arm Fast Bowler", basePrice: 200 },
-        { n: "Dushmantha Chameera", r: "Right-Arm Fast Bowler", basePrice: 150 },
-        { n: "KL Rahul (WK)", r: "Right-Handed Batsman", basePrice: 200 },
-        { n: "Karun Nair", r: "Right-Handed Batsman", basePrice: 100 },
-        { n: "Axar Patel (C)", r: "LHB / Left-Arm Off Spin", basePrice: 200 },
-        { n: "Kuldeep Yadav", r: "Left-Arm Leg Spin", basePrice: 180 },
-        { n: "Nitish Rana", r: "Left-Handed Batsman", basePrice: 150 },
-        { n: "Kyle Jamieson", r: "Right-Arm Fast Medium", basePrice: 150 },
-        { n: "Lungi Ngidi", r: "Right-Arm Fast Medium", basePrice: 150 },
-        { n: "T. Natarajan", r: "Left-Arm Medium Bowler", basePrice: 150 },
-        { n: "Mukesh Kumar", r: "Right-Arm Medium Bowler", basePrice: 100 },
-        { n: "Pathum Nissanka", r: "Right-Handed Batsman", basePrice: 100 },
-        { n: "Ajay Mandal", r: "LHB / Left-Arm Off Spin", basePrice: 50 },
-        { n: "Prithvi Shaw", r: "Right-Handed Batsman", basePrice: 150 },
-        { n: "Ashutosh Sharma", r: "Right-Handed Batsman", basePrice: 75 },
-        { n: "Auqib Nabi", r: "Right-Arm Medium Bowler", basePrice: 50 },
-        { n: "Sameer Rizvi", r: "Right-Handed Batsman", basePrice: 75 },
-        { n: "Tristan Stubbs", r: "Right-Handed Batsman", basePrice: 125 },
-        { n: "Abishek Porel (Wk)", r: "Left-Handed Batsman", basePrice: 75 },
-        { n: "Vipraj Nigam", r: "RHB / Right-Arm Leg Spin", basePrice: 50 },
-        { n: "Tripurana Vijay", r: "Right-Arm Off Spin Bowler", basePrice: 50 },
-        { n: "Sahil Parakh", r: "Left-Handed Batsman", basePrice: 50 },
-        { n: "Madhav Tiwari", r: "RHB / Right-Arm Medium Fast", basePrice: 50 },
-        { n: "Ajinkya Rahane (C)", r: "Right-Handed Batsman", basePrice: 150 },
-        { n: "Manish Pandey", r: "Right-Handed Batsman", basePrice: 100 },
-        { n: "Sunil Narine", r: "LHB / Right-Arm Off Spin", basePrice: 200 },
-        { n: "Rahul Tripathi", r: "Right-Handed Batsman", basePrice: 150 },
-        { n: "Tim Seifert (Wk)", r: "Right-Handed Batsman", basePrice: 100 },
-        { n: "Navdeep Saini", r: "Right-Arm Fast Bowler", basePrice: 100 },
-        { n: "Rinku Singh", r: "Left-Handed Batsman", basePrice: 150 },
-        { n: "Rovman Powell", r: "Right-Handed Batsman", basePrice: 150 },
-        { n: "Sarthak Ranjan", r: "Right-Handed Batsman", basePrice: 50 },
-        { n: "Finn Allen", r: "Right-Handed Batsman", basePrice: 125 },
-        { n: "Rachin Ravindra", r: "LHB / Left-Arm Off Spin", basePrice: 150 },
-        { n: "Cameron Green", r: "RHB / Right-Arm Fast Medium", basePrice: 200 },
-        { n: "Ramandeep Singh", r: "Right-Handed Batsman", basePrice: 75 },
-        { n: "Anukul Roy", r: "LHB / Left-Arm Off Spin", basePrice: 50 },
-        { n: "Varun Chakaravarthy", r: "Right-Arm Leg Spin", basePrice: 150 },
-        { n: "Kartik Tyagi", r: "Right-Arm Medium Fast", basePrice: 100 },
-        { n: "Blessing Muzarabani", r: "Right-Arm Fast Medium", basePrice: 100 },
-        { n: "Prashant Solanki", r: "Right-Arm Leg Spin", basePrice: 50 },
-        { n: "Matheesha Pathirana", r: "Right-Arm Fast Bowler", basePrice: 150 },
-        { n: "Saurabh Dubey", r: "Left-Arm Medium Fast", basePrice: 50 },
-        { n: "Vaibhav Arora", r: "Right-Arm Fast Medium", basePrice: 75 },
-        { n: "Umran Malik", r: "Right-Arm Fast Bowler", basePrice: 150 },
-        { n: "Angkrish Raghuvanshi (Wk)", r: "Right-Handed Batsman", basePrice: 50 },
-        { n: "Tejasvi Singh (WK)", r: "Right-Handed Batsman", basePrice: 50 },
-        { n: "Daksh Kamra", r: "RHB / Right-Arm Off Spin", basePrice: 50 },
-        { n: "Rohit Sharma", r: "Right-Handed Batsman", basePrice: 200 },
-        { n: "Trent Boult", r: "Left-Arm Fast Medium", basePrice: 200 },
-        { n: "Suryakumar Yadav", r: "Right-Handed Batsman", basePrice: 200 },
-        { n: "Quinton de Kock (Wk)", r: "Left-Handed Batsman", basePrice: 200 },
-        { n: "Mitchell Santner", r: "LHB / Left-Arm Off Spin", basePrice: 150 },
-        { n: "Deepak Chahar", r: "Right-Arm Medium Bowler", basePrice: 150 },
-        { n: "Shardul Thakur", r: "RHB / Right-Arm Medium Fast", basePrice: 150 },
-        { n: "Corbin Bosch", r: "RHB / Right-Arm Fast Medium", basePrice: 100 },
-        { n: "Hardik Pandya (C)", r: "RHB / Right-Arm Medium Fast", basePrice: 200 },
-        { n: "Jasprit Bumrah", r: "Right-Arm Fast Bowler", basePrice: 200 },
-        { n: "Ryan Rickelton (Wk)", r: "Left-Handed Batsman", basePrice: 100 },
-        { n: "Will Jacks", r: "RHB / Right-Arm Off Spin", basePrice: 150 },
-        { n: "Mayank Rawat", r: "RHB / Right-Arm Off Spin", basePrice: 50 },
-        { n: "Mayank Markande", r: "Right-Arm Leg Spin", basePrice: 75 },
-        { n: "Sherfane Rutherford", r: "Left-Handed Batsman", basePrice: 125 },
-        { n: "Raghu Sharma", r: "Right Arm Leg Spin", basePrice: 50 },
-        { n: "Atharva Ankolekar", r: "Left-Arm Off Spin Bowler", basePrice: 50 },
-        { n: "Tilak Varma", r: "Left-Handed Batsman", basePrice: 150 },
-        { n: "Ashwani Kumar", r: "Left-Arm Medium Bowler", basePrice: 50 },
-        { n: "Raj Bawa", r: "LHB / Right-Arm Medium Fast", basePrice: 75 },
-        { n: "Danish Malewar", r: "Right-Handed Batsman", basePrice: 50 },
-        { n: "Robin Minz (WK)", r: "Left-Handed Batsman", basePrice: 50 },
-        { n: "Allah Ghazanfar", r: "Right-Arm Off Spin Bowler", basePrice: 75 },
-        { n: "Naman Dhir", r: "RHB / Right-Arm Off Spin", basePrice: 50 },
-        { n: "M. Salahuddin Izhar", r: "Left-Arm Fast Bowler", basePrice: 50 },
-        { n: "Harshal Patel", r: "Right-Arm Medium Bowler", basePrice: 150 },
-        { n: "Jaydev Unadkat", r: "Left-Arm Medium Bowler", basePrice: 100 },
-        { n: "David Payne", r: "Left-Arm Fast Medium", basePrice: 100 },
-        { n: "Pat Cummins", r: "Right-Arm Fast Bowler", basePrice: 200 },
-        { n: "Heinrich Klaasen (Wk)", r: "Right-Handed Batsman", basePrice: 200 },
-        { n: "Travis Head", r: "Left-Handed Batsman", basePrice: 200 },
-        { n: "Liam Livingstone", r: "RHB / Right-Arm Leg Spin", basePrice: 200 },
-        { n: "Ishan Kishan (C) (WK)", r: "Left-Handed Batsman", basePrice: 200 },
-        { n: "Kamindu Mendis", r: "LHB / Left-Arm Off Spin", basePrice: 100 },
-        { n: "Brydon Carse", r: "Right-Arm Fast Bowler", basePrice: 125 },
-        { n: "Zeeshan Ansari", r: "Right-Arm Leg Spin", basePrice: 50 },
-        { n: "Abhishek Sharma", r: "LHB / Left-Arm Off Spin", basePrice: 150 },
-        { n: "Shivam Mavi", r: "Right-Arm Fast Medium", basePrice: 100 },
-        { n: "Harsh Dubey", r: "LHB / Left-Arm Off Spin", basePrice: 50 },
-        { n: "Salil Arora (Wk)", r: "Right-Handed Batsman", basePrice: 50 },
-        { n: "Nitish Kumar Reddy", r: "RHB / Right-Arm Medium Fast", basePrice: 100 },
-        { n: "Amit Kumar", r: "RHB / Right-Arm Leg Spin", basePrice: 50 },
-        { n: "Praful Hinge", r: "Right-Arm Medium Fast", basePrice: 50 },
-        { n: "Smaran Ravichandran", r: "Left-Handed Batsman", basePrice: 50 },
-        { n: "Eshan Malinga", r: "Right-Arm Fast Medium", basePrice: 50 },
-        { n: "Sakib Hussain", r: "Right-Arm Medium Bowler", basePrice: 50 },
-        { n: "Aniket Verma", r: "Right-Handed Batsman", basePrice: 50 },
-        { n: "Shivang Kumar", r: "Right-Handed Batsman", basePrice: 50 },
-        { n: "K. Bhaveshbhai Fuletra", r: "Left-Arm Off Spin Bowler", basePrice: 50 },
-        { n: "Omkar Tarmale", r: "Right-Arm Fast Bowler", basePrice: 50 },
-        { n: "Ravindra Jadeja", r: "LHB / Left-Arm Off Spin", basePrice: 200 },
-        { n: "Sandeep Sharma", r: "Right-Arm Medium Bowler", basePrice: 100 },
-        { n: "Adam Milne", r: "Right-Arm Fast Bowler", basePrice: 150 },
-        { n: "Donovan Ferreira (Wk)", r: "Right-Handed Batsman", basePrice: 100 },
-        { n: "Dasun Shanaka", r: "RHB / Right-Arm Medium", basePrice: 150 },
-        { n: "Jofra Archer", r: "Right-Arm Fast Bowler", basePrice: 200 },
-        { n: "Shimron Hetmyer", r: "Left-Handed Batsman", basePrice: 180 },
-        { n: "Tushar Deshpande", r: "Right-Arm Medium Bowler", basePrice: 100 },
-        { n: "Nandre Burger", r: "Left-Arm Fast Medium", basePrice: 125 },
-        { n: "Riyan Parag (C)", r: "RHB / Right-Arm Off Spin", basePrice: 150 },
-        { n: "Yashasvi Jaiswal", r: "Left-Handed Batsman", basePrice: 200 },
-        { n: "Kuldeep Sen", r: "Right-Arm Fast Bowler", basePrice: 75 },
-        { n: "Ravi Bishnoi", r: "Right-Arm Leg Spin", basePrice: 150 },
-        { n: "Dhruv Jurel (wk)", r: "Right-Handed Batsman", basePrice: 100 },
-        { n: "Sushant Mishra", r: "Left-Arm Medium Fast", basePrice: 50 },
-        { n: "Yudhvir Singh", r: "RHB / Right-Arm Medium Fast", basePrice: 50 },
-        { n: "Shubham Dubey", r: "Left-Handed Batsman", basePrice: 50 },
-        { n: "Vignesh Puthur", r: "RHB / Left-Arm Leg Spin", basePrice: 50 },
-        { n: "Aman Rao", r: "Right-Handed Batsman", basePrice: 50 },
-        { n: "Kwena Maphaka", r: "Left-Arm Fast Bowler", basePrice: 100 },
-        { n: "Yash Punja", r: "RHB / Right-Arm Leg Spin", basePrice: 50 },
-        { n: "L. Pretorius (Wk)", r: "Left-Handed Batsman", basePrice: 75 },
-        { n: "Vaibhav Sooryavanshi", r: "Left-Handed Batsman", basePrice: 50 },
-        { n: "Ravi Singh (Wk)", r: "Left-Handed Batsman", basePrice: 50 },
-        { n: "Brijesh Sharma", r: "RHB / Right-Arm Medium", basePrice: 50 },
-        { n: "Virat Kohli", r: "Right-Handed Batsman", basePrice: 200 },
-        { n: "Josh Hazlewood", r: "Right-Arm Fast Medium", basePrice: 200 },
-        { n: "Swapnil Singh", r: "RHB / Left-Arm Off Spin", basePrice: 50 },
-        { n: "Bhuvneshwar Kumar", r: "Right-Arm Medium Bowler", basePrice: 150 },
-        { n: "Jacob Duffy", r: "Right-Arm Fast Medium", basePrice: 75 },
-        { n: "Krunal Pandya", r: "LHB / Left-Arm Off Spin", basePrice: 150 },
-        { n: "Jitesh Sharma (Wk)", r: "Right-Handed Batsman", basePrice: 100 },
-        { n: "Venkatesh Iyer", r: "LHB / Right-Arm Medium", basePrice: 150 },
-        { n: "Phil Salt (Wk)", r: "Right-Handed Batsman", basePrice: 150 },
-        { n: "Rajat Patidar (C)", r: "Right-Handed Batsman", basePrice: 150 },
-        { n: "Nuwan Thushara", r: "Right-Arm Medium Fast", basePrice: 100 },
-        { n: "Romario Shepherd", r: "RHB / Right-Arm Fast Medium", basePrice: 125 },
-        { n: "Tim David", r: "Right-Handed Batsman", basePrice: 150 },
-        { n: "Devdutt Padikkal", r: "Left-Handed Batsman", basePrice: 150 },
-        { n: "Yash Dayal", r: "Left-Arm Medium Fast", basePrice: 75 },
-        { n: "Rasikh Salam", r: "Right-Arm Medium Bowler", basePrice: 50 },
-        { n: "Jordan Cox", r: "Right-Handed Batsman", basePrice: 100 },
-        { n: "Jacob Bethell", r: "Left-Handed Batsman", basePrice: 100 },
-        { n: "Vicky Ostwal", r: "Left-Arm Off Spin Bowler", basePrice: 50 },
-        { n: "Mangesh Yadav", r: "RHB / Left-Arm Medium Fast", basePrice: 50 },
-        { n: "Suyash Sharma", r: "Right-Arm Leg Spin", basePrice: 75 },
-        { n: "Vihaan M. Malhotra", r: "LHB / Right-Arm Off Spin", basePrice: 50 },
-        { n: "Abhinandan Singh", r: "Right-Arm Medium Fast", basePrice: 50 },
-        { n: "Kanishk Chouhan", r: "RHB / Right-Arm Off Spin", basePrice: 50 },
-        { n: "Satvik Deswal", r: "Left-Handed Batsman", basePrice: 50 }
-    ];
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyB2QFOj9pHPdw4QRe4rwSzUvdaXPc7IPI8",
+            authDomain: "ipl-auction-4f969.firebaseapp.com",
+            databaseURL: "https://ipl-auction-4f969-default-rtdb.firebaseio.com",
+            projectId: "ipl-auction-4f969",
+            storageBucket: "ipl-auction-4f969.firebasestorage.app",
+            messagingSenderId: "328599072004",
+            appId: "1:328599072004:web:e60fd71ca57988bd86f451"
+        };
 
-    let database, currentAuctionRef, teamsRef, bidsRef, soldPlayersRef, auctionStateRef;
-    let firebaseAvailable = false;
-    let timerInterval = null;
+        // ALL 249 PLAYERS - Complete List
+        const allPlayers = [
+            { n: "MS Dhoni (WK)", r: "Right-Handed Batsman" }, 
+            { n: "Akeal Hosein", r: "Left-Arm Off Spin Bowler" }, 
+            { n: "Shreyas Gopal", r: "RHB / Right-Arm Leg Spin" }, 
+            { n: "Jamie Overton", r: "RHB / Right-Arm Fast" }, 
+            { n: "Matt Henry", r: "Right-Arm Fast Medium" }, 
+            { n: "Sanju Samson (Wk)", r: "Right-Handed Batsman" }, 
+            { n: "Matt Short", r: "RHB / Right-Arm Off Spin" }, 
+            { n: "Sarfaraz Khan", r: "Right-Handed Batsman" }, 
+            { n: "Khaleel Ahmed", r: "Left-Arm Fast Medium" }, 
+            { n: "Shivam Dube", r: "LHB / Right-Arm Medium" }, 
+            { n: "Ruturaj Gaikwad (C)", r: "Right-Handed Batsman" }, 
+            { n: "Rahul Chahar", r: "Right-Arm Leg Spin" }, 
+            { n: "Spencer Johnson", r: "Left-Arm Fast Bowler" }, 
+            { n: "Mukesh Choudhary", r: "Left-Arm Medium Bowler" }, 
+            { n: "Urvil Patel (Wk)", r: "Right-Handed Batsman" }, 
+            { n: "Aman Hakim Khan", r: "RHB / Right-Arm Medium" }, 
+            { n: "Anshul Kamboj", r: "Right-Arm Medium Bowler" }, 
+            { n: "Noor Ahmad", r: "Left-Arm Leg Spin Bowler" }, 
+            { n: "Dewald Brevis", r: "Right-Handed Batsman" }, 
+            { n: "Gurjapneet Singh", r: "Left-Arm Medium Fast" }, 
+            { n: "Zakary Foulkes", r: "RHB / Right-Arm Medium" }, 
+            { n: "Prashant Veer", r: "LHB / Left-Arm Off Spin" }, 
+            { n: "Ramakrishna Ghosh", r: "Right-Arm Medium Fast" }, 
+            { n: "Ayush Mhatre", r: "Right-Handed Batsman" }, 
+            { n: "Kartik Sharma (WK)", r: "Right-Handed Batsman" }, 
+            { n: "Marcus Stoinis", r: "RHB / Right-Arm Medium" }, 
+            { n: "Yuzvendra Chahal", r: "Right-Arm Leg Spin" }, 
+            { n: "Shashank Singh", r: "Right-Handed Batsman" }, 
+            { n: "Praveen Dubey", r: "Right-Arm Leg Spin" }, 
+            { n: "Lockie Ferguson", r: "Right-Arm Fast Bowler" }, 
+            { n: "Shreyas Iyer (C)", r: "Right-Handed Batsman" }, 
+            { n: "Ben Dwarshuis", r: "Left-Arm Fast Medium" }, 
+            { n: "Vishnu Vinod (WK)", r: "Right-Handed Batsman" }, 
+            { n: "Xavier Bartlett", r: "Right-Arm Fast Medium" }, 
+            { n: "Yash Thakur", r: "Right-Arm Fast Medium" }, 
+            { n: "Azmatullah Omarzai", r: "RHB / Right-Arm Medium Fast" }, 
+            { n: "Vyshak Vijay Kumar", r: "Right-Arm Medium Bowler" }, 
+            { n: "Arshdeep Singh", r: "Left-Arm Medium Fast" }, 
+            { n: "Marco Jansen", r: "RHB / Left-Arm Fast" }, 
+            { n: "Nehal Wadhera", r: "LHB / Right-Arm Leg Spin" }, 
+            { n: "Prabhsimran Singh (Wk)", r: "Right-Handed Batsman" }, 
+            { n: "Harpreet Brar", r: "Left-Arm Off Spin Bowler" }, 
+            { n: "Priyansh Arya", r: "Left-Handed Batsman" }, 
+            { n: "Suryansh Shedge", r: "Right-Handed Batsman" }, 
+            { n: "Cooper Connolly", r: "LHB / Left-Arm Off Spin" }, 
+            { n: "Mitchell Owen", r: "RHB / Right-Arm Medium" }, 
+            { n: "Pyla Avinash", r: "Right-Handed Batsman" }, 
+            { n: "Harnoor Singh", r: "Left-Handed Batsman" }, 
+            { n: "Musheer Khan", r: "RHB / Left-Arm Off Spin" }, 
+            { n: "Vishal Nishad", r: "Right-Arm Leg Spin" }, 
+            { n: "Ishant Sharma", r: "Right-Arm Fast Medium" }, 
+            { n: "Jos Buttler (Wk)", r: "Right-Handed Batsman" }, 
+            { n: "Jason Holder", r: "RHB / Right-Arm Medium Fast" }, 
+            { n: "Jayant Yadav", r: "Right-Arm Off Spin Bowler" }, 
+            { n: "Kagiso Rabada", r: "Right-Arm Fast Bowler" }, 
+            { n: "Rahul Tewatia", r: "LHB / Right-Arm Leg Spin" }, 
+            { n: "Luke Wood", r: "Left-Arm Fast Medium Bowler" }, 
+            { n: "Shahrukh Khan", r: "Right-Handed Batsman" }, 
+            { n: "Glenn Phillips", r: "RHB / Right-Arm Off Spin" }, 
+            { n: "Prasidh Krishna", r: "Right-Arm Fast Medium" }, 
+            { n: "Rashid Khan", r: "Right-Arm Leg Spin" }, 
+            { n: "Mohammed Siraj", r: "Right-Arm Fast Bowler" }, 
+            { n: "Washington Sundar", r: "LHB / Right-Arm Off Spin" }, 
+            { n: "Sai Kishore", r: "Left-Arm Off Spin Bowler" }, 
+            { n: "Shubman Gill (C)", r: "Right-Handed Batsman" }, 
+            { n: "Tom Banton (WK)", r: "Right-Handed Batsman" }, 
+            { n: "Kulwant Khejroliya", r: "Left-Arm Medium Fast" }, 
+            { n: "Anuj Rawat (Wk)", r: "Left-Handed Batsman" }, 
+            { n: "Sai Sudharsan", r: "Left-Handed Batsman" }, 
+            { n: "Manav Suthar", r: "Left-Arm Off Spin Bowler" }, 
+            { n: "Kumar Kushagra (Wk)", r: "Right-Handed Batsman" }, 
+            { n: "Arshad Khan", r: "Left-Arm Medium Bowler" }, 
+            { n: "Nishant Sindhu", r: "LHB / Left-Arm Off Spin" }, 
+            { n: "Gurnoor Brar", r: "Right-Arm Fast Bowler" }, 
+            { n: "Ashok Sharma", r: "Right-Arm Medium Fast" }, 
+            { n: "Mitchell Marsh", r: "RHB / Right-Arm Medium" }, 
+            { n: "Mohammed Shami", r: "Right-Arm Fast Bowler" }, 
+            { n: "Shahbaz Ahmed", r: "LHB / Left-Arm Off Spin" }, 
+            { n: "Anrich Nortje", r: "Right-Arm Fast Bowler" }, 
+            { n: "Nicholas Pooran (Wk)", r: "Left-Handed Batsman" }, 
+            { n: "Aiden Markram", r: "RHB / Right-Arm Off Spin" }, 
+            { n: "Avesh Khan", r: "Right-Arm Fast Medium" }, 
+            { n: "Wanindu Hasaranga", r: "RHB / Right-Arm Leg Spin" }, 
+            { n: "Himmat Singh", r: "Right-Handed Batsman" }, 
+            { n: "Matthew Breetzke", r: "Right-Handed Batsman" }, 
+            { n: "Rishabh Pant (C) (Wk)", r: "Left-Handed Batsman" }, 
+            { n: "Josh Inglis (WK)", r: "Right-Handed Batsman" }, 
+            { n: "M Siddharth", r: "Left-Arm Off Spin Bowler" }, 
+            { n: "Mohsin Khan", r: "Left-Arm Medium Fast" }, 
+            { n: "Ayush Badoni", r: "Right-Handed Batsman" }, 
+            { n: "Arjun Tendulkar", r: "Left-Arm Medium Fast" }, 
+            { n: "Akash Singh", r: "Left-Arm Medium Fast" }, 
+            { n: "Abdul Samad", r: "Right-Handed Batsman" }, 
+            { n: "Arshin Kulkarni", r: "RHB / Right-Arm Medium" }, 
+            { n: "Naman Tiwari", r: "Left-Arm Medium Fast" }, 
+            { n: "Akshat Raghuwanshi", r: "Right-Handed Batsman" }, 
+            { n: "Mayank Yadav", r: "Right-Arm Fast Bowler" }, 
+            { n: "M-Choudhary (WK)", r: "Right-Handed Batsman" }, 
+            { n: "Prince Yadav", r: "Right-Arm Fast Bowler" }, 
+            { n: "Digvesh Rathi", r: "Right-Arm Leg Spin" }, 
+            { n: "David Miller", r: "Left-Handed Batsman" }, 
+            { n: "Mitchell Starc", r: "Left-Arm Fast Bowler" }, 
+            { n: "Dushmantha Chameera", r: "Right-Arm Fast Bowler" }, 
+            { n: "KL Rahul (WK)", r: "Right-Handed Batsman" }, 
+            { n: "Karun Nair", r: "Right-Handed Batsman" }, 
+            { n: "Axar Patel (C)", r: "LHB / Left-Arm Off Spin" }, 
+            { n: "Kuldeep Yadav", r: "Left-Arm Leg Spin" }, 
+            { n: "Nitish Rana", r: "Left-Handed Batsman" }, 
+            { n: "Kyle Jamieson", r: "Right-Arm Fast Medium" }, 
+            { n: "Lungi Ngidi", r: "Right-Arm Fast Medium" }, 
+            { n: "T. Natarajan", r: "Left-Arm Medium Bowler" }, 
+            { n: "Mukesh Kumar", r: "Right-Arm Medium Bowler" }, 
+            { n: "Pathum Nissanka", r: "Right-Handed Batsman" }, 
+            { n: "Ajay Mandal", r: "LHB / Left-Arm Off Spin" }, 
+            { n: "Prithvi Shaw", r: "Right-Handed Batsman" }, 
+            { n: "Ashutosh Sharma", r: "Right-Handed Batsman" }, 
+            { n: "Auqib Nabi", r: "Right-Arm Medium Bowler" }, 
+            { n: "Sameer Rizvi", r: "Right-Handed Batsman" }, 
+            { n: "Tristan Stubbs", r: "Right-Handed Batsman" }, 
+            { n: "Abishek Porel (Wk)", r: "Left-Handed Batsman" }, 
+            { n: "Vipraj Nigam", r: "RHB / Right-Arm Leg Spin" }, 
+            { n: "Tripurana Vijay", r: "Right-Arm Off Spin Bowler" }, 
+            { n: "Sahil Parakh", r: "Left-Handed Batsman" }, 
+            { n: "Madhav Tiwari", r: "RHB / Right-Arm Medium Fast" }, 
+            { n: "Ajinkya Rahane (C)", r: "Right-Handed Batsman" }, 
+            { n: "Manish Pandey", r: "Right-Handed Batsman" }, 
+            { n: "Sunil Narine", r: "LHB / Right-Arm Off Spin" }, 
+            { n: "Rahul Tripathi", r: "Right-Handed Batsman" }, 
+            { n: "Tim Seifert (Wk)", r: "Right-Handed Batsman" }, 
+            { n: "Navdeep Saini", r: "Right-Arm Fast Bowler" }, 
+            { n: "Rinku Singh", r: "Left-Handed Batsman" }, 
+            { n: "Rovman Powell", r: "Right-Handed Batsman" }, 
+            { n: "Sarthak Ranjan", r: "Right-Handed Batsman" }, 
+            { n: "Finn Allen", r: "Right-Handed Batsman" }, 
+            { n: "Rachin Ravindra", r: "LHB / Left-Arm Off Spin" }, 
+            { n: "Cameron Green", r: "RHB / Right-Arm Fast Medium" }, 
+            { n: "Ramandeep Singh", r: "Right-Handed Batsman" }, 
+            { n: "Anukul Roy", r: "LHB / Left-Arm Off Spin" }, 
+            { n: "Varun Chakaravarthy", r: "Right-Arm Leg Spin" }, 
+            { n: "Kartik Tyagi", r: "Right-Arm Medium Fast" }, 
+            { n: "Blessing Muzarabani", r: "Right-Arm Fast Medium" }, 
+            { n: "Prashant Solanki", r: "Right-Arm Leg Spin" }, 
+            { n: "Matheesha Pathirana", r: "Right-Arm Fast Bowler" }, 
+            { n: "Saurabh Dubey", r: "Left-Arm Medium Fast" }, 
+            { n: "Vaibhav Arora", r: "Right-Arm Fast Medium" }, 
+            { n: "Umran Malik", r: "Right-Arm Fast Bowler" }, 
+            { n: "Angkrish Raghuvanshi (Wk)", r: "Right-Handed Batsman" }, 
+            { n: "Tejasvi Singh (WK)", r: "Right-Handed Batsman" }, 
+            { n: "Daksh Kamra", r: "RHB / Right-Arm Off Spin" }, 
+            { n: "Rohit Sharma", r: "Right-Handed Batsman" }, 
+            { n: "Trent Boult", r: "Left-Arm Fast Medium" }, 
+            { n: "Suryakumar Yadav", r: "Right-Handed Batsman" }, 
+            { n: "Quinton de Kock (Wk)", r: "Left-Handed Batsman" }, 
+            { n: "Mitchell Santner", r: "LHB / Left-Arm Off Spin" }, 
+            { n: "Deepak Chahar", r: "Right-Arm Medium Bowler" }, 
+            { n: "Shardul Thakur", r: "RHB / Right-Arm Medium Fast" }, 
+            { n: "Corbin Bosch", r: "RHB / Right-Arm Fast Medium" }, 
+            { n: "Hardik Pandya (C)", r: "RHB / Right-Arm Medium Fast" }, 
+            { n: "Jasprit Bumrah", r: "Right-Arm Fast Bowler" }, 
+            { n: "Ryan Rickelton (Wk)", r: "Left-Handed Batsman" }, 
+            { n: "Will Jacks", r: "RHB / Right-Arm Off Spin" }, 
+            { n: "Mayank Rawat", r: "RHB / Right-Arm Off Spin" }, 
+            { n: "Mayank Markande", r: "Right-Arm Leg Spin" }, 
+            { n: "Sherfane Rutherford", r: "Left-Handed Batsman" }, 
+            { n: "Raghu Sharma", r: "Right Arm Leg Spin" }, 
+            { n: "Atharva Ankolekar", r: "Left-Arm Off Spin Bowler" }, 
+            { n: "Tilak Varma", r: "Left-Handed Batsman" }, 
+            { n: "Ashwani Kumar", r: "Left-Arm Medium Bowler" },
+            { n: "Raj Bawa", r: "LHB / Right-Arm Medium Fast" }, 
+            { n: "Danish Malewar", r: "Right-Handed Batsman" }, 
+            { n: "Robin Minz (WK)", r: "Left-Handed Batsman" }, 
+            { n: "Allah Ghazanfar", r: "Right-Arm Off Spin Bowler" }, 
+            { n: "Naman Dhir", r: "RHB / Right-Arm Off Spin" }, 
+            { n: "M. Salahuddin Izhar", r: "Left-Arm Fast Bowler" }, 
+            { n: "Harshal Patel", r: "Right-Arm Medium Bowler" }, 
+            { n: "Jaydev Unadkat", r: "Left-Arm Medium Bowler" }, 
+            { n: "David Payne", r: "Left-Arm Fast Medium" }, 
+            { n: "Pat Cummins", r: "Right-Arm Fast Bowler" }, 
+            { n: "Heinrich Klaasen (Wk)", r: "Right-Handed Batsman" }, 
+            { n: "Travis Head", r: "Left-Handed Batsman" }, 
+            { n: "Liam Livingstone", r: "RHB / Right-Arm Leg Spin" }, 
+            { n: "Ishan Kishan (C) (WK)", r: "Left-Handed Batsman" }, 
+            { n: "Kamindu Mendis", r: "LHB / Left-Arm Off Spin" }, 
+            { n: "Brydon Carse", r: "Right-Arm Fast Bowler" }, 
+            { n: "Zeeshan Ansari", r: "Right-Arm Leg Spin" }, 
+            { n: "Abhishek Sharma", r: "LHB / Left-Arm Off Spin" }, 
+            { n: "Shivam Mavi", r: "Right-Arm Fast Medium" }, 
+            { n: "Harsh Dubey", r: "LHB / Left-Arm Off Spin" }, 
+            { n: "Salil Arora (Wk)", r: "Right-Handed Batsman" }, 
+            { n: "Nitish Kumar Reddy", r: "RHB / Right-Arm Medium Fast" }, 
+            { n: "Amit Kumar", r: "RHB / Right-Arm Leg Spin" }, 
+            { n: "Praful Hinge", r: "Right-Arm Medium Fast" }, 
+            { n: "Smaran Ravichandran", r: "Left-Handed Batsman" }, 
+            { n: "Eshan Malinga", r: "Right-Arm Fast Medium" }, 
+            { n: "Sakib Hussain", r: "Right-Arm Medium Bowler" }, 
+            { n: "Aniket Verma", r: "Right-Handed Batsman" }, 
+            { n: "Shivang Kumar", r: "Right-Handed Batsman" }, 
+            { n: "K. Bhaveshbhai Fuletra", r: "Left-Arm Off Spin Bowler" }, 
+            { n: "Omkar Tarmale", r: "Right-Arm Fast Bowler" }, 
+            { n: "Ravindra Jadeja", r: "LHB / Left-Arm Off Spin" }, 
+            { n: "Sandeep Sharma", r: "Right-Arm Medium Bowler" }, 
+            { n: "Adam Milne", r: "Right-Arm Fast Bowler" }, 
+            { n: "Donovan Ferreira (Wk)", r: "Right-Handed Batsman" }, 
+            { n: "Dasun Shanaka", r: "RHB / Right-Arm Medium" }, 
+            { n: "Jofra Archer", r: "Right-Arm Fast Bowler" }, 
+            { n: "Shimron Hetmyer", r: "Left-Handed Batsman" }, 
+            { n: "Tushar Deshpande", r: "Right-Arm Medium Bowler" }, 
+            { n: "Nandre Burger", r: "Left-Arm Fast Medium" }, 
+            { n: "Riyan Parag (C)", r: "RHB / Right-Arm Off Spin" }, 
+            { n: "Yashasvi Jaiswal", r: "Left-Handed Batsman" }, 
+            { n: "Kuldeep Sen", r: "Right-Arm Fast Bowler" }, 
+            { n: "Ravi Bishnoi", r: "Right-Arm Leg Spin" }, 
+            { n: "Dhruv Jurel (wk)", r: "Right-Handed Batsman" }, 
+            { n: "Sushant Mishra", r: "Left-Arm Medium Fast" }, 
+            { n: "Yudhvir Singh", r: "RHB / Right-Arm Medium Fast" }, 
+            { n: "Shubham Dubey", r: "Left-Handed Batsman" }, 
+            { n: "Vignesh Puthur", r: "RHB / Left-Arm Leg Spin" }, 
+            { n: "Aman Rao", r: "Right-Handed Batsman" }, 
+            { n: "Kwena Maphaka", r: "Left-Arm Fast Bowler" }, 
+            { n: "Yash Punja", r: "RHB / Right-Arm Leg Spin" }, 
+            { n: "L. Pretorius (Wk)", r: "Left-Handed Batsman" }, 
+            { n: "Vaibhav Sooryavanshi", r: "Left-Handed Batsman" }, 
+            { n: "Ravi Singh (Wk)", r: "Left-Handed Batsman" }, 
+            { n: "Brijesh Sharma", r: "RHB / Right-Arm Medium" }, 
+            { n: "Virat Kohli", r: "Right-Handed Batsman" }, 
+            { n: "Josh Hazlewood", r: "Right-Arm Fast Medium" }, 
+            { n: "Swapnil Singh", r: "RHB / Left-Arm Off Spin" }, 
+            { n: "Bhuvneshwar Kumar", r: "Right-Arm Medium Bowler" }, 
+            { n: "Jacob Duffy", r: "Right-Arm Fast Medium" }, 
+            { n: "Krunal Pandya", r: "LHB / Left-Arm Off Spin" }, 
+            { n: "Jitesh Sharma (Wk)", r: "Right-Handed Batsman" }, 
+            { n: "Venkatesh Iyer", r: "LHB / Right-Arm Medium" }, 
+            { n: "Phil Salt (Wk)", r: "Right-Handed Batsman" }, 
+            { n: "Rajat Patidar (C)", r: "Right-Handed Batsman" }, 
+            { n: "Nuwan Thushara", r: "Right-Arm Medium Fast" }, 
+            { n: "Romario Shepherd", r: "RHB / Right-Arm Fast Medium" }, 
+            { n: "Tim David", r: "Right-Handed Batsman" }, 
+            { n: "Devdutt Padikkal", r: "Left-Handed Batsman" }, 
+            { n: "Yash Dayal", r: "Left-Arm Medium Fast" }, 
+            { n: "Rasikh Salam", r: "Right-Arm Medium Bowler" }, 
+            { n: "Jordan Cox", r: "Right-Handed Batsman" }, 
+            { n: "Jacob Bethell", r: "Left-Handed Batsman" }, 
+            { n: "Vicky Ostwal", r: "Left-Arm Off Spin Bowler" }, 
+            { n: "Mangesh Yadav", r: "RHB / Left-Arm Medium Fast" }, 
+            { n: "Suyash Sharma", r: "Right-Arm Leg Spin" }, 
+            { n: "Vihaan M. Malhotra", r: "LHB / Right-Arm Off Spin" }, 
+            { n: "Abhinandan Singh", r: "Right-Arm Medium Fast" }, 
+            { n: "Kanishk Chouhan", r: "RHB / Right-Arm Off Spin" }, 
+            { n: "Satvik Deswal", r: "Left-Handed Batsman" }
+        ];
 
-    const teams = [
-        { id: "csk", name: "Chennai Super Kings", shortName: "CSK", color: "#FDB913", budget: 3000000000 },
-        { id: "mi", name: "Mumbai Indians", shortName: "MI", color: "#004BA0", budget: 3000000000 },
-        { id: "rcb", name: "Royal Challengers Bangalore", shortName: "RCB", color: "#EC1C24", budget: 3000000000 },
-        { id: "kkr", name: "Kolkata Knight Riders", shortName: "KKR", color: "#3A225D", budget: 3000000000 },
-        { id: "srh", name: "Sunrisers Hyderabad", shortName: "SRH", color: "#F26522", budget: 3000000000 },
-        { id: "dc", name: "Delhi Capitals", shortName: "DC", color: "#0078BC", budget: 3000000000 },
-        { id: "pbks", name: "Punjab Kings", shortName: "PBKS", color: "#ED1B24", budget: 3000000000 },
-        { id: "rr", name: "Rajasthan Royals", shortName: "RR", color: "#254AA5", budget: 3000000000 },
-        { id: "lsg", name: "Lucknow Super Giants", shortName: "LSG", color: "#2AA9C9", budget: 3000000000 },
-        { id: "gt", name: "Gujarat Titans", shortName: "GT", color: "#1B2B32", budget: 3000000000 }
-    ];
+        let database, currentAuctionRef, teamsRef, bidsRef;
+        let firebaseAvailable = false;
+        let timerInterval = null;
+        let playerIndex = 0;
+        let unsoldPlayers = [];
 
-    function showToast(msg, isError=false) {
-        const toast = document.getElementById('toastMsg');
-        toast.textContent = msg;
-        toast.style.backgroundColor = isError ? '#ef4444' : '#10b981';
-        toast.classList.remove('opacity-0','pointer-events-none');
-        toast.classList.add('opacity-100');
-        setTimeout(() => toast.classList.add('opacity-0','pointer-events-none'), 3000);
-    }
+        const teams = [
+            { id: "csk", name: "Chennai Super Kings", shortName: "CSK", color: "#FDB913", budget: 3000000000 },
+            { id: "mi", name: "Mumbai Indians", shortName: "MI", color: "#004BA0", budget: 3000000000 },
+            { id: "rcb", name: "Royal Challengers Bangalore", shortName: "RCB", color: "#EC1C24", budget: 3000000000 },
+            { id: "kkr", name: "Kolkata Knight Riders", shortName: "KKR", color: "#3A225D", budget: 3000000000 },
+            { id: "srh", name: "Sunrisers Hyderabad", shortName: "SRH", color: "#F26522", budget: 3000000000 },
+            { id: "dc", name: "Delhi Capitals", shortName: "DC", color: "#0078BC", budget: 3000000000 },
+            { id: "pbks", name: "Punjab Kings", shortName: "PBKS", color: "#ED1B24", budget: 3000000000 },
+            { id: "rr", name: "Rajasthan Royals", shortName: "RR", color: "#254AA5", budget: 3000000000 },
+            { id: "lsg", name: "Lucknow Super Giants", shortName: "LSG", color: "#2AA9C9", budget: 3000000000 },
+            { id: "gt", name: "Gujarat Titans", shortName: "GT", color: "#1B2B32", budget: 3000000000 }
+        ];
 
-    function getCleanPlayerName(full) { return full ? full.replace(/\s*\([^)]*\)/g,'').trim() : '—'; }
-    function extractRole(full) { let m = full?.match(/\(([^)]+)\)/); return m ? m[1] : '—'; }
+        function showToast(msg, isError = false) {
+            const toast = document.getElementById('toastMsg');
+            toast.textContent = msg;
+            toast.style.backgroundColor = isError ? '#ef4444' : '#10b981';
+            toast.classList.remove('opacity-0', 'pointer-events-none');
+            toast.classList.add('opacity-100');
+            setTimeout(() => toast.classList.add('opacity-0', 'pointer-events-none'), 3000);
+        }
 
-    async function loadAuctionState() {
-        let snap = await auctionStateRef.once('value');
-        let state = snap.val();
-        if(!state) { state = { currentPlayerIndex:0, soldPlayerNames:[], unsoldPlayerNames:[] }; await auctionStateRef.set(state); }
-        return state;
-    }
-    async function saveAuctionState(state) { await auctionStateRef.update(state); }
-    function getRemainingPlayers(state) {
-        let excluded = [...(state.soldPlayerNames||[]), ...(state.unsoldPlayerNames||[])];
-        return allPlayers.filter(p => !excluded.includes(p.n));
-    }
+        function getCleanPlayerName(fullDisplay) {
+            if (!fullDisplay || fullDisplay === '—') return '—';
+            return fullDisplay.replace(/\s*\([^)]*\)/g, '').trim() || fullDisplay.split('(')[0].trim();
+        }
+        
+        function extractRoleFromDisplay(playerDisplay) {
+            if (!playerDisplay || playerDisplay === '—') return '—';
+            const match = playerDisplay.match(/\(([^)]+)\)/);
+            return match ? match[1] : 'Role info';
+        }
 
-    async function renderUpcoming() {
-        let state = await loadAuctionState();
-        let remaining = getRemainingPlayers(state);
-        let idx = state.currentPlayerIndex||0;
-        let upcoming = remaining.slice(idx);
-        document.getElementById('remainingCount').innerText = upcoming.length;
-        let container = document.getElementById('upcomingPlayersContainer');
-        if(!container) return;
-        if(upcoming.length===0) { container.innerHTML='<div class="text-center text-gray-400 py-4">🏆 Auction Complete</div>'; return; }
-        container.innerHTML = upcoming.slice(0,25).map((p,i)=>`<div class="upcoming-card bg-white p-2 rounded-lg border border-blue-100 flex gap-2"><span class="bg-blue-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px]">${i+1}</span><div><div class="font-semibold text-xs">🏏 ${p.n}</div><div class="text-[9px] text-blue-600">${p.r}</div></div></div>`).join('');
-    }
+        async function autoMarkUnsoldIfNoBids(completedPlayer, playerRole) {
+            return new Promise((resolve) => {
+                currentAuctionRef.once('value', (snap) => {
+                    const auction = snap.val();
+                    if (auction && auction.currentBid === 0 && auction.activePlayer === completedPlayer) {
+                        const unsoldPlayer = { n: getCleanPlayerName(completedPlayer), r: playerRole };
+                        const alreadyUnsold = unsoldPlayers.some(p => p.n === unsoldPlayer.n);
+                        if (!alreadyUnsold) {
+                            unsoldPlayers.push(unsoldPlayer);
+                            renderUnsoldPlayers();
+                            showToast(`⏰ No bids placed! ${unsoldPlayer.n} moved to unsold list`, false);
+                        }
+                    }
+                    resolve();
+                });
+            });
+        }
 
-    async function renderUnsold() {
-        let state = await loadAuctionState();
-        let unsold = state.unsoldPlayerNames||[];
-        document.getElementById('unsoldCount').innerText = unsold.length;
-        let container = document.getElementById('unsoldPlayersContainer');
-        if(!container) return;
-        if(unsold.length===0) { container.innerHTML='<div class="text-center text-gray-400 py-4">No unsold players</div>'; return; }
-        container.innerHTML = unsold.slice(0,50).map(name=>`<div class="unsold-card bg-red-50 p-2 rounded-lg border border-red-200"><span class="font-semibold text-xs">❌ ${name}</span></div>`).join('');
-    }
-
-    async function markSold(playerName, teamId, price) {
-        let state = await loadAuctionState();
-        if(!state.soldPlayerNames.includes(playerName)) state.soldPlayerNames.push(playerName);
-        await saveAuctionState(state);
-        if(soldPlayersRef) await soldPlayersRef.push({ playerName, team:teamId, price, timestamp:Date.now() });
-        await renderUnsold(); await renderUpcoming();
-    }
-    async function markUnsold(playerName) {
-        let state = await loadAuctionState();
-        if(!state.unsoldPlayerNames.includes(playerName)) state.unsoldPlayerNames.push(playerName);
-        await saveAuctionState(state);
-        await renderUnsold(); await renderUpcoming();
-    }
-
-    async function finalizeWinningBid() {
-        let snap = await currentAuctionRef.once('value');
-        let auction = snap.val();
-        if(!auction || auction.status !== 'active') return;
-        let winningBid = auction.currentBid || 0;
-        let winningTeamId = auction.highestBidder;
-        let playerFull = auction.activePlayer;
-        let playerName = getCleanPlayerName(playerFull);
-        if(winningBid > 0 && winningTeamId) {
-            let team = teams.find(t=>t.id===winningTeamId);
-            if(team) {
-                let teamSnap = await teamsRef.child(winningTeamId).once('value');
-                let curBudget = teamSnap.val().budget;
-                await teamsRef.child(winningTeamId).update({ budget: curBudget - winningBid });
-                await markSold(playerName, winningTeamId, winningBid);
-                showToast(`🎉 SOLD! ${playerName} → ${team.name} for ₹${(winningBid/100000).toFixed(1)} Lakhs`);
+        function updateAuctionUI(snapshot) {
+            if (!snapshot.exists()) return;
+            const data = snapshot.val();
+            const badge = document.getElementById('auctionStatusBadge');
+            if (data.status === 'active') {
+                badge.textContent = '🔴 LIVE AUCTION';
+                badge.className = 'px-3 py-1 rounded-full text-xs font-bold bg-red-500 text-white animate-pulse';
+            } else {
+                badge.textContent = '⏸️ INACTIVE';
+                badge.className = 'px-3 py-1 rounded-full text-xs font-bold bg-gray-300 text-gray-700';
             }
-        } else {
-            await markUnsold(playerName);
-            showToast(`⏰ No bids for ${playerName}. Moved to unsold.`);
+            
+            const activePlayerFull = data.activePlayer || '—';
+            const cleanName = getCleanPlayerName(activePlayerFull);
+            document.getElementById('activePlayerDisplay').textContent = cleanName;
+            const roleText = extractRoleFromDisplay(activePlayerFull);
+            const roleSpan = document.getElementById('activePlayerRoleDisplay');
+            if (roleSpan) {
+                roleSpan.textContent = roleText !== '—' ? `🎯 Role: ${roleText}` : '—';
+            }
+            document.getElementById('currentBid').textContent = `₹${((data.currentBid || 0) / 100000).toFixed(1)} Lakh`;
+            document.getElementById('winningTeamName').textContent = data.highestBidderName || 'None';
+            const timer = data.timerRemaining || 0;
+            const mins = Math.floor(Math.max(0, timer) / 60);
+            const secs = Math.floor(Math.max(0, timer) % 60);
+            const timerElement = document.getElementById('timerValue');
+            timerElement.textContent = `${mins.toString().padStart(2,'0')}:${secs.toString().padStart(2,'0')}`;
+            
+            if (timer <= 5 && timer > 0) {
+                timerElement.classList.add('timer-critical');
+            } else {
+                timerElement.classList.remove('timer-critical');
+            }
         }
-        await currentAuctionRef.update({ status: 'inactive', timerRemaining: 0 });
-    }
 
-    async function nextPlayer() {
-        let state = await loadAuctionState();
-        let idx = state.currentPlayerIndex || 0;
-        let remaining = getRemainingPlayers(state);
-        if(idx >= remaining.length) {
-            showToast("🏆 Auction completed! No more players.", true);
-            return;
+        function renderTeams(teamsData) {
+            const grid = document.getElementById('teamsGrid');
+            if (!teamsData) return;
+            grid.innerHTML = teams.map(team => {
+                const firebaseTeam = teamsData[team.id];
+                const budget = firebaseTeam ? firebaseTeam.budget : team.budget;
+                const budgetCr = (budget / 10000000).toFixed(1);
+                const spentCr = 300 - parseFloat(budgetCr);
+                return `<div class="team-card bg-white rounded-xl p-4 border-2 border-gray-200 hover:shadow-lg transition-all cursor-pointer" style="border-left: 5px solid ${team.color}" data-team-id="${team.id}"><div class="flex justify-between items-start"><div><h3 class="font-bold text-lg text-gray-800">${team.name}</h3><p class="text-gray-500 text-xs">${team.shortName}</p></div><div class="text-right"><span class="text-2xl font-bold text-green-600">₹${budgetCr} Cr</span><p class="text-xs text-gray-500">Remaining Budget</p></div></div><div class="w-full bg-gray-200 rounded-full h-2 mt-3"><div class="h-2 rounded-full transition-all duration-500" style="width: ${(budget / 3000000000) * 100}%; background-color: ${team.color}"></div></div>${spentCr > 0 ? `<p class="text-xs text-gray-400 mt-1">Spent: ₹${spentCr.toFixed(1)} Cr</p>` : ''}</div>`;
+            }).join('');
+            
+            const teamSelect = document.getElementById('bidTeam');
+            teamSelect.innerHTML = '<option value="">Select Team</option>' + teams.map(team => `<option value="${team.id}">${team.name}</option>`).join('');
         }
-        let player = remaining[idx];
-        let fullDisplay = `${player.n} (${player.r})`;
-        await currentAuctionRef.update({
-            activePlayer: fullDisplay,
-            timerRemaining: 30,
-            status: 'active',
-            currentBid: 0,
-            highestBidder: null,
-            highestBidderName: null
-        });
-        state.currentPlayerIndex = idx + 1;
-        await saveAuctionState(state);
-        await renderUpcoming();
-        showToast(`🎯 Current: ${player.n} | Base: ₹${player.basePrice} Lakhs`);
-    }
 
-    function startTimer() {
-        if(timerInterval) clearInterval(timerInterval);
-        timerInterval = setInterval(async () => {
-            if(!firebaseAvailable) return;
-            let snap = await currentAuctionRef.once('value');
-            let data = snap.val();
-            if(data && data.status === 'active' && data.timerRemaining > 0) {
-                let newTimer = data.timerRemaining - 1;
-                await currentAuctionRef.update({ timerRemaining: newTimer });
-                if(newTimer === 0) {
-                    await finalizeWinningBid();
+        function renderBidHistory(bids) {
+            const bidHistoryDiv = document.getElementById('bidHistory');
+            if (!bids) { bidHistoryDiv.innerHTML = '<div class="text-xs text-gray-400 text-center py-2">No bids yet</div>'; return; }
+            const bidsArray = Object.values(bids).sort((a, b) => b.timestamp - a.timestamp).slice(0, 15);
+            if (bidsArray.length === 0) {
+                bidHistoryDiv.innerHTML = '<div class="text-xs text-gray-400 text-center py-2">No bids yet</div>';
+            } else {
+                bidHistoryDiv.innerHTML = bidsArray.map(bid => `<div class="bid-history-item flex justify-between items-center rounded-lg hover:bg-gray-100"><div class="flex items-center gap-2"><i class="fas fa-gavel text-xs text-purple-500"></i><span class="font-semibold text-xs">${bid.teamName}</span></div><span class="text-green-600 font-bold text-xs">₹${(bid.amount / 100000).toFixed(1)} L</span><span class="text-gray-400 text-xs">${bid.player ? getCleanPlayerName(bid.player) : '—'}</span></div>`).join('');
+            }
+        }
+
+        function renderUnsoldPlayers() {
+            const container = document.getElementById('unsoldPlayersContainer');
+            const unsoldCountSpan = document.getElementById('unsoldCount');
+            unsoldCountSpan.innerText = unsoldPlayers.length;
+            
+            if(container) {
+                if(unsoldPlayers.length === 0) {
+                    container.innerHTML = '<div class="text-center text-gray-400 py-4"><i class="fas fa-smile"></i> No unsold players yet</div>';
+                    return;
+                }
+                container.innerHTML = unsoldPlayers.slice(0, 50).map((player, idx) => `
+                    <div class="unsold-card flex items-start gap-2 p-2 rounded-lg border border-red-200 shadow-sm bg-red-50 hover:bg-red-100 transition-all">
+                        <div class="bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-bold shadow-sm flex-shrink-0">${idx + 1}</div>
+                        <div class="flex-1">
+                            <div class="font-semibold text-gray-800 text-xs">🏏 ${player.n}</div>
+                            <div class="text-[9px] text-red-600 mt-0.5 truncate">${player.r}</div>
+                        </div>
+                    </div>
+                `).join('');
+                if(unsoldPlayers.length > 50) {
+                    container.innerHTML += `<div class="text-center text-[10px] text-gray-400 mt-2">+ ${unsoldPlayers.length - 50} more unsold players</div>`;
                 }
             }
-        }, 1000);
-    }
-
-    function updateAuctionUI(snapshot) {
-        let data = snapshot.val();
-        if(!data) return;
-        let badge = document.getElementById('auctionStatusBadge');
-        if(data.status === 'active') {
-            badge.innerHTML = '🔴 LIVE AUCTION';
-            badge.className = 'px-3 py-1 rounded-full text-xs font-bold bg-red-500 text-white animate-pulse';
-        } else {
-            badge.innerHTML = '⏸️ INACTIVE';
-            badge.className = 'px-3 py-1 rounded-full text-xs font-bold bg-gray-200 text-gray-700';
         }
-        document.getElementById('activePlayerDisplay').innerText = getCleanPlayerName(data.activePlayer);
-        document.getElementById('activePlayerRoleDisplay').innerText = extractRole(data.activePlayer);
-        document.getElementById('currentBid').innerHTML = `₹${((data.currentBid||0)/100000).toFixed(1)} Lakh`;
-        document.getElementById('winningTeamName').innerText = data.highestBidderName || 'None';
-        let timer = data.timerRemaining || 0;
-        let mins = Math.floor(timer/60), secs = timer%60;
-        let timerEl = document.getElementById('timerValue');
-        timerEl.innerText = `${mins.toString().padStart(2,'0')}:${secs.toString().padStart(2,'0')}`;
-        if(timer<=5 && timer>0) timerEl.classList.add('timer-critical');
-        else timerEl.classList.remove('timer-critical');
-    }
 
-    function renderTeams(teamsData) {
-        let grid = document.getElementById('teamsGrid');
-        if(!teamsData) return;
-        grid.innerHTML = teams.map(team => {
-            let fb = teamsData[team.id];
-            let budget = fb ? fb.budget : team.budget;
-            let budgetCr = (budget/10000000).toFixed(1);
-            let spent = 300 - parseFloat(budgetCr);
-            return `<div class="team-card bg-white rounded-xl p-4 border-l-4" style="border-left-color:${team.color}"><div class="flex justify-between"><div><h3 class="font-bold">${team.name}</h3><p class="text-gray-500 text-xs">${team.shortName}</p></div><div class="text-right"><span class="text-2xl font-bold text-green-600">₹${budgetCr} Cr</span><p class="text-xs text-gray-400">Remaining</p></div></div><div class="w-full bg-gray-200 rounded-full h-2 mt-2"><div class="h-2 rounded-full" style="width:${(budget/3000000000)*100}%; background:${team.color}"></div></div>${spent>0?`<p class="text-xs text-gray-400 mt-1">Spent: ₹${spent.toFixed(1)} Cr</p>`:''}</div>`;
-        }).join('');
-    }
-
-    function renderBidHistory(bids) {
-        let div = document.getElementById('bidHistory');
-        if(!bids) { div.innerHTML='<div class="text-gray-400 text-center py-2">No bids yet</div>'; return; }
-        let arr = Object.values(bids).sort((a,b)=>b.timestamp - a.timestamp).slice(0,15);
-        if(arr.length===0) div.innerHTML='<div class="text-gray-400 text-center py-2">No bids yet</div>';
-        else div.innerHTML = arr.map(b=>`<div class="flex justify-between text-xs p-1 bg-gray-100 rounded"><span class="font-semibold">${b.teamName}</span><span class="text-green-600">₹${(b.amount/100000).toFixed(1)}L</span><span class="text-gray-500 truncate">${getCleanPlayerName(b.player)}</span></div>`).join('');
-    }
-
-    async function init() {
-        firebase.initializeApp(firebaseConfig);
-        database = firebase.database();
-        currentAuctionRef = database.ref('current_auction');
-        teamsRef = database.ref('teams');
-        bidsRef = database.ref('bids');
-        soldPlayersRef = database.ref('sold_players');
-        auctionStateRef = database.ref('auction_state');
-
-        database.ref('.info/connected').on('value', snap => {
-            firebaseAvailable = snap.val();
-            document.getElementById('connectionStatus').innerText = firebaseAvailable ? 'Connected ✅' : 'Offline ⚠️';
-            document.getElementById('statusDot').className = firebaseAvailable ? 'w-3 h-3 bg-green-500 rounded-full animate-pulse' : 'w-3 h-3 bg-red-500 rounded-full';
-        });
-
-        currentAuctionRef.on('value', updateAuctionUI);
-        teamsRef.on('value', renderTeams);
-        bidsRef.on('value', renderBidHistory);
-
-        teamsRef.once('value', async snap => {
-            if(!snap.exists()) {
-                let init = {};
-                teams.forEach(t=>init[t.id]={teamName:t.name, shortName:t.shortName, budget:t.budget, color:t.color, players:[]});
-                await teamsRef.set(init);
+        function renderUpcomingPlayers() {
+            const container = document.getElementById('upcomingPlayersContainer');
+            const remainingSpan = document.getElementById('remainingCount');
+            const remainingPlayers = allPlayers.slice(playerIndex);
+            
+            if(remainingSpan) remainingSpan.innerText = remainingPlayers.length;
+            
+            if(container) {
+                if(remainingPlayers.length === 0) {
+                    container.innerHTML = '<div class="text-center py-6 text-gray-400"><i class="fas fa-check-circle text-3xl mb-2 block"></i>Auction Completed! 🏆</div>';
+                    return;
+                }
+                
+                container.innerHTML = remainingPlayers.slice(0, 25).map((p, idx) => `
+                    <div class="upcoming-card flex items-start gap-2 p-2 rounded-lg border border-blue-100 shadow-sm bg-white hover:shadow-md transition-all">
+                        <div class="bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-bold shadow-sm flex-shrink-0">${idx + 1}</div>
+                        <div class="flex-1">
+                            <div class="font-semibold text-gray-800 text-xs">🏏 ${p.n}</div>
+                            <div class="text-[9px] text-blue-600 mt-0.5 truncate">${p.r}</div>
+                        </div>
+                    </div>
+                `).join('');
+                if(remainingPlayers.length > 25) {
+                    container.innerHTML += `<div class="text-center text-[10px] text-gray-400 mt-2 pt-1">+ ${remainingPlayers.length - 25} more players in queue</div>`;
+                }
             }
-        });
-        await currentAuctionRef.once('value', async snap => {
-            if(!snap.exists()) await currentAuctionRef.set({ activePlayer:'—', timerRemaining:0, status:'inactive', currentBid:0, highestBidder:null, highestBidderName:null });
-        });
-        await renderUpcoming();
-        await renderUnsold();
-        startTimer();
-    }
+        }
 
-    document.getElementById('startAuctionBtn').onclick = () => currentAuctionRef.update({ status: 'active' }).then(()=>showToast("Auction started. Click NEXT PLAYER to begin."));
-    document.getElementById('nextPlayerBtn').onclick = () => nextPlayer();
-    document.getElementById('resetTimerBtn').onclick = async () => {
-        let snap = await currentAuctionRef.once('value');
-        if(snap.val().status === 'active') await currentAuctionRef.update({ timerRemaining: 30 });
-        else showToast("Auction not active", true);
-    };
-    init();
-</script>
+        function placeBid() {
+            if (!firebaseAvailable) return showToast("Firebase not connected", true);
+            const bidAmountLakhs = document.getElementById('bidAmount').value;
+            const teamId = document.getElementById('bidTeam').value;
+            if (!bidAmountLakhs || !teamId) return showToast("Please select team and enter bid amount", true);
+            const amountNum = parseFloat(bidAmountLakhs) * 100000;
+            currentAuctionRef.once('value', (snap) => {
+                const auction = snap.val();
+                if (auction.status !== 'active') return showToast("Auction is not active!", true);
+                if (amountNum <= auction.currentBid) return showToast("Bid must be higher than current bid", true);
+                teamsRef.child(teamId).once('value', (teamSnap) => {
+                    if (!teamSnap.exists() || teamSnap.val().budget < amountNum) return showToast("Insufficient budget!", true);
+                    currentAuctionRef.update({
+                        currentBid: amountNum,
+                        highestBidder: teamId,
+                        highestBidderName: teams.find(t => t.id === teamId).name
+                    }).then(() => {
+                        bidsRef.push({
+                            teamId,
+                            teamName: teams.find(t => t.id === teamId).name,
+                            amount: amountNum,
+                            player: auction.activePlayer,
+                            timestamp: Date.now()
+                        });
+                        showToast(`✅ Bid placed: ${(amountNum/100000).toFixed(1)} Lakhs by ${teams.find(t => t.id === teamId).name}`);
+                        document.getElementById('bidAmount').value = '';
+                    });
+                });
+            });
+        }
+
+        async function nextPlayer() {
+            if (playerIndex >= allPlayers.length) {
+                showToast("🏆 Auction completed! No more players.", true);
+                return;
+            }
+            
+            const currentPlayerInfo = playerIndex > 0 ? allPlayers[playerIndex - 1] : null;
+            const currentPlayerFull = playerIndex > 0 ? `${currentPlayerInfo.n} (${currentPlayerInfo.r})` : null;
+            
+            if (currentPlayerFull) {
+                await autoMarkUnsoldIfNoBids(currentPlayerFull, currentPlayerInfo.r);
+            }
+            
+            const p = allPlayers[playerIndex];
+            const fullDisplayString = `${p.n} (${p.r})`;
+            await currentAuctionRef.update({
+                activePlayer: fullDisplayString,
+                timerRemaining: 30,
+                status: 'active',
+                currentBid: 0,
+                highestBidder: null,
+                highestBidderName: null
+            });
+            playerIndex++;
+            renderUpcomingPlayers();
+            showToast(`🎯 Next player: ${p.n}`, false);
+        }
+
+        function initFirebase() {
+            try {
+                firebase.initializeApp(firebaseConfig);
+                database = firebase.database();
+                currentAuctionRef = database.ref('current_auction');
+                teamsRef = database.ref('teams');
+                bidsRef = database.ref('bids');
+                
+                database.ref('.info/connected').on('value', snap => {
+                    firebaseAvailable = snap.val();
+                    document.getElementById('connectionStatus').textContent = firebaseAvailable ? 'Connected ✅' : 'Offline ⚠️';
+                    document.getElementById('statusDot').className = firebaseAvailable ? 'w-3 h-3 bg-green-500 rounded-full animate-pulse' : 'w-3 h-3 bg-red-500 rounded-full';
+                });
+                
+                currentAuctionRef.on('value', updateAuctionUI);
+                teamsRef.on('value', renderTeams);
+                bidsRef.on('value', renderBidHistory);
+                
+                teamsRef.once('value', snap => {
+                    if (!snap.exists()) {
+                        let initial = {};
+                        teams.forEach(t => initial[t.id] = { teamName: t.name, shortName: t.shortName, budget: 3000000000, color: t.color });
+                        teamsRef.set(initial);
+                    }
+                });
+                
+                renderUpcomingPlayers();
+                renderUnsoldPlayers();
+                
+                if (timerInterval) clearInterval(timerInterval);
+                timerInterval = setInterval(async () => {
+                    if (firebaseAvailable) {
+                        const snap = await currentAuctionRef.once('value');
+                        const data = snap.val();
+                        if (data && data.status === 'active' && data.timerRemaining > 0) {
+                            const newTimer = data.timerRemaining - 1;
+                            await currentAuctionRef.update({ timerRemaining: newTimer });
+                            
+                            if (newTimer === 0) {
+                                const currentPlayer = data.activePlayer;
+                                if (currentPlayer && data.currentBid === 0) {
+                                    const playerName = getCleanPlayerName(currentPlayer);
+                                    const playerRole = extractRoleFromDisplay(currentPlayer);
+                                    const unsoldPlayer = { n: playerName, r: playerRole };
+                                    const alreadyUnsold = unsoldPlayers.some(p => p.n === unsoldPlayer.n);
+                                    if (!alreadyUnsold && playerName !== '—') {
+                                        unsoldPlayers.push(unsoldPlayer);
+                                        renderUnsoldPlayers();
+                                        showToast(`⏰ Timer ended! No bids for ${playerName}. Moved to unsold list`, false);
+                                    }
+                                    if (playerIndex < allPlayers.length) {
+                                        const nextP = allPlayers[playerIndex];
+                                        const nextFullString = `${nextP.n} (${nextP.r})`;
+                                        await currentAuctionRef.update({
+                                            activePlayer: nextFullString,
+                                            timerRemaining: 30,
+                                            currentBid: 0,
+                                            highestBidder: null,
+                                            highestBidderName: null
+                                        });
+                                        playerIndex++;
+                                        renderUpcomingPlayers();
+                                        showToast(`⏩ Auto-advancing to next player: ${nextP.n}`, false);
+                                    } else {
+                                        await currentAuctionRef.update({ status: 'inactive' });
+                                        showToast("🏆 Auction completed!", false);
+                                    }
+                                } else if (data.currentBid > 0) {
+                                    const winningTeam = teams.find(t => t.id === data.highestBidder);
+                                    const teamSnap = await teamsRef.child(data.highestBidder).once('value');
+                                    const currentBudget = teamSnap.val().budget;
+                                    await teamsRef.child(data.highestBidder).update({
+                                        budget: currentBudget - data.currentBid
+                                    });
+                                    showToast(`🎉 SOLD! ${getCleanPlayerName(data.activePlayer)} goes to ${winningTeam.name} for ₹${(data.currentBid/100000).toFixed(1)} Lakhs!`, false);
+                                    
+                                    if (playerIndex < allPlayers.length) {
+                                        const nextP = allPlayers[playerIndex];
+                                        const nextFullString = `${nextP.n} (${nextP.r})`;
+                                        await currentAuctionRef.update({
+                                            activePlayer: nextFullString,
+                                            timerRemaining: 30,
+                                            currentBid: 0,
+                                            highestBidder: null,
+                                            highestBidderName: null
+                                        });
+                                        playerIndex++;
+                                        renderUpcomingPlayers();
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }, 1000);
+            } catch (err) {
+                console.error(err);
+                showToast("Firebase Error", true);
+            }
+        }
+
+        document.getElementById('startAuctionBtn').addEventListener('click', () => currentAuctionRef.update({status: 'active'}));
+        document.getElementById('nextPlayerBtn').addEventListener('click', nextPlayer);
+        document.getElementById('resetTimerBtn').addEventListener('click', () => currentAuctionRef.update({timerRemaining: 30}));
+        document.getElementById('placeBidBtn').addEventListener('click', placeBid);
+        
+        console.log(`✅ Total players loaded: ${allPlayers.length}`);
+        initFirebase();
+    </script>
 </body>
 </html>
